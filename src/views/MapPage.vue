@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, shallowRef, watch } from 'vue'
-import { NButton, NIcon, NSpace, useMessage } from 'naive-ui'
+import { NButton, NIcon, NSpace, useMessage, NSpin } from 'naive-ui'
 import { useRouter } from 'vue-router'
-import { ArrowBackOutline, RefreshOutline } from '@vicons/ionicons5'
+import { ArrowBackOutline, RefreshOutline, LocateOutline } from '@vicons/ionicons5'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import FilterBar from '@/components/filter/FilterBar.vue'
 import { useFilter } from '@/composables/useFilter'
@@ -17,6 +17,11 @@ const message = useMessage()
 const map = shallowRef<any>(null)
 const AMap = shallowRef<any>(null)
 const markers = ref<any[]>([])
+const mapReady = ref(false)
+
+// 视野联动筛选
+const viewportFilterEnabled = ref(true)
+const visibleRestaurants = ref<Restaurant[]>([])
 
 // 餐厅数据
 const restaurants = ref<Restaurant[]>([])
@@ -73,6 +78,11 @@ onUnmounted(() => {
 
 // 监听筛选结果变化
 watch(filteredRestaurants, () => {
+  filterByViewport()
+}, { deep: true })
+
+// 监听可见餐厅变化来更新标记
+watch(visibleRestaurants, () => {
   updateMarkers()
 }, { deep: true })
 
@@ -122,17 +132,7 @@ async function initMap() {
       plugins: ['AMap.ToolBar', 'AMap.Scale', 'AMap.Geolocation']
     })
 
-    map.value = new AMap.value.Map('map-container', {
-      viewMode: '3D',
-      zoom: 11,
-      center: [121.4737, 31.2304], // 默认上海
-      theme: 'amap://styles/dark'
-    })
-
-    map.value.addControl(new AMap.value.ToolBar())
-    map.value.addControl(new AMap.value.Scale())
-    
-    // 自动定位
+    // 获取当前位置
     const geolocation = new AMap.value.Geolocation({
       enableHighAccuracy: true,
       timeout: 10000,
@@ -140,17 +140,88 @@ async function initMap() {
       zoomToAccuracy: true,
       position: 'RB'
     })
-    map.value.addControl(geolocation)
-    geolocation.getCurrentPosition((status: string, result: any) => {
-      if (status === 'complete') {
-        map.value.setCenter([result.position.lng, result.position.lat])
-        map.value.setZoom(15)
-      }
+
+    // 使用 Promise 封装定位
+    const getCurrentPosition = () => {
+      return new Promise<{ lng: number, lat: number } | null>((resolve) => {
+        geolocation.getCurrentPosition((status: string, result: any) => {
+          if (status === 'complete') {
+            resolve({ lng: result.position.lng, lat: result.position.lat })
+          } else {
+            resolve(null)
+          }
+        })
+      })
+    }
+
+    // 等待定位结果
+    const position = await getCurrentPosition()
+    
+    // 初始化地图，如果定位成功使用定位坐标，否则使用默认上海坐标
+    const center = position ? [position.lng, position.lat] : [121.4737, 31.2304]
+    
+    map.value = new AMap.value.Map('map-container', {
+      viewMode: '3D',
+      zoom: position ? 15 : 11,
+      center: center,
+      theme: 'amap://styles/dark'
     })
 
-    updateMarkers()
+    map.value.addControl(new AMap.value.ToolBar())
+    map.value.addControl(new AMap.value.Scale())
+    map.value.addControl(geolocation)
+    
+    // 监听地图移动结束事件，实现视野联动筛选
+    map.value.on('moveend', () => {
+      filterByViewport()
+    })
+    map.value.on('zoomend', () => {
+      filterByViewport()
+    })
+    
+    mapReady.value = true
+    filterByViewport()
   } catch (e) {
     console.error('Map init failed', e)
+    // 即使失败，也至少显示地图（虽然可能为空）
+    mapReady.value = true 
+  }
+}
+
+// 根据当前视野筛选餐厅
+function filterByViewport() {
+  if (!map.value || !viewportFilterEnabled.value) {
+    visibleRestaurants.value = filteredRestaurants.value
+    return
+  }
+
+  const bounds = map.value.getBounds()
+  if (!bounds) {
+    visibleRestaurants.value = filteredRestaurants.value
+    return
+  }
+
+  const ne = bounds.getNorthEast() // 东北角
+  const sw = bounds.getSouthWest() // 西南角
+
+  visibleRestaurants.value = filteredRestaurants.value.filter(res => {
+    if (!res.longitude || !res.latitude) return false
+    return (
+      res.longitude >= sw.lng &&
+      res.longitude <= ne.lng &&
+      res.latitude >= sw.lat &&
+      res.latitude <= ne.lat
+    )
+  })
+}
+
+// 切换视野联动
+function toggleViewportFilter() {
+  viewportFilterEnabled.value = !viewportFilterEnabled.value
+  if (viewportFilterEnabled.value) {
+    filterByViewport()
+  } else {
+    visibleRestaurants.value = filteredRestaurants.value
   }
 }
 
@@ -162,8 +233,8 @@ function updateMarkers() {
   markers.value.forEach(m => m.setMap(null))
   markers.value = []
 
-  // 添加新标记
-  filteredRestaurants.value.forEach(res => {
+  // 添加新标记 (使用视野筛选后的餐厅)
+  visibleRestaurants.value.forEach(res => {
     if (res.longitude && res.latitude) {
       const tierConfig = TIER_CONFIG[res.tier]
       
@@ -182,11 +253,6 @@ function updateMarkers() {
       markers.value.push(marker)
     }
   })
-
-  // 如果有标记，自适应视野
-  if (markers.value.length > 0) {
-    map.value.setFitView()
-  }
 }
 
 function createMarkerContent(emoji: string, color: string) {
@@ -229,6 +295,14 @@ function handleBack() {
       </NSpace>
       
       <NSpace>
+        <NButton 
+          :type="viewportFilterEnabled ? 'primary' : 'default'"
+          secondary 
+          @click="toggleViewportFilter"
+        >
+          <template #icon><NIcon><LocateOutline /></NIcon></template>
+          {{ viewportFilterEnabled ? '视野联动开' : '视野联动关' }}
+        </NButton>
         <NButton secondary @click="fetchRestaurants">
           <template #icon><NIcon><RefreshOutline /></NIcon></template>
           刷新数据
@@ -238,9 +312,17 @@ function handleBack() {
 
     <div class="filter-wrapper">
       <FilterBar />
+      <div class="viewport-info">
+        当前视野: {{ visibleRestaurants.length }} / {{ filteredRestaurants.length }} 家餐厅
+      </div>
     </div>
 
-    <div id="map-container" class="map-container"></div>
+    <div class="map-wrapper">
+      <div v-if="!mapReady" class="map-loading">
+        <NSpin size="large" description="正在定位中..." />
+      </div>
+      <div v-show="mapReady" id="map-container" class="map-container"></div>
+    </div>
   </div>
 </template>
 
@@ -276,13 +358,38 @@ function handleBack() {
   z-index: 90;
 }
 
-.map-container {
+.viewport-info {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.map-wrapper {
   flex: 1;
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
   border-radius: 12px 12px 0 0;
   overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1a1a1a;
+  color: #fff;
+}
+
+.map-container {
+  flex: 1;
+  width: 100%;
+  height: 100%;
 }
 
 :deep(.custom-marker) {

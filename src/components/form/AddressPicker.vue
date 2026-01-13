@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { NAutoComplete } from 'naive-ui'
+import { NInput, NCard, NScrollbar, NSpin } from 'naive-ui'
 import AMapLoader from '@amap/amap-jsapi-loader'
 
 const emit = defineEmits(['select'])
 
 const options = ref<any[]>([])
 const searchValue = ref('')
+const showDropdown = ref(false)
+const loading = ref(false)
 let autoComplete: any = null
 let AMapInstance: any = null
 
@@ -34,10 +36,15 @@ onMounted(async () => {
 })
 
 async function handleSearch(query: string) {
+  searchValue.value = query
   if (!query || !autoComplete) {
     options.value = []
+    showDropdown.value = false
     return
   }
+  
+  loading.value = true
+  showDropdown.value = true
   
   // 开发环境调试日志
   if (import.meta.env.DEV) {
@@ -45,6 +52,7 @@ async function handleSearch(query: string) {
   }
 
   autoComplete.search(query, (status: string, result: any) => {
+    loading.value = false
     if (import.meta.env.DEV) {
       console.log('Search result:', status, result)
     }
@@ -63,22 +71,40 @@ async function handleSearch(query: string) {
   })
 }
 
-function handleSelect(value: string) {
-  // 根据 label 或 value 查找选中项
-  const selectedOption = options.value.find(opt => opt.value === value)
-  const selectedTip = selectedOption?.data
+function handleSelect(option: any) {
+  const selectedTip = option.data
   
   if (selectedTip) {
+    // 高德地图 location 是 LngLat 对象，需要用 getLng()/getLat() 方法获取
+    const loc = selectedTip.location
     emit('select', {
       name: selectedTip.name,
       address: typeof selectedTip.address === 'string' ? selectedTip.address : selectedTip.district,
       city: parseCity(selectedTip.district),
       district: selectedTip.district,
-      location: selectedTip.location
+      // 转换为普通对象，确保 lat/lng 属性可访问
+      location: {
+        lng: typeof loc.getLng === 'function' ? loc.getLng() : loc.lng,
+        lat: typeof loc.getLat === 'function' ? loc.getLat() : loc.lat
+      }
     })
     // 选中后保持显示名称
     searchValue.value = selectedTip.name
+    showDropdown.value = false
   }
+}
+
+function handleFocus() {
+  if (searchValue.value && options.value.length > 0) {
+    showDropdown.value = true
+  }
+}
+
+function handleBlur() {
+  // 延时关闭，以便点击事件能被触发
+  setTimeout(() => {
+    showDropdown.value = false
+  }, 200)
 }
 
 // 简单的城市解析逻辑
@@ -93,34 +119,86 @@ function parseCity(district: string): string {
 
 <template>
   <div class="address-picker">
-    <NAutoComplete
+    <NInput
       v-model:value="searchValue"
-      :options="options"
       placeholder="输入餐厅名称或地址进行搜索"
       clearable
-      :menu-props="{ class: 'address-picker-menu' }"
-      @search="handleSearch"
-      @select="handleSelect"
-
+      @input="handleSearch"
+      @focus="handleFocus"
+      @blur="handleBlur"
     />
+    
+    <div v-show="showDropdown && (options.length > 0 || loading)" class="picker-dropdown">
+      <NCard content-style="padding: 0;" :bordered="true">
+        <NScrollbar style="max-height: 300px">
+          <div v-if="loading" class="loading-state">
+            <NSpin size="small" />
+          </div>
+          <ul v-else class="options-list">
+            <li
+              v-for="option in options"
+              :key="option.data.id"
+              class="option-item"
+              @mousedown="handleSelect(option)"
+            >
+              <div class="option-name">{{ option.data.name }}</div>
+              <div class="option-address">
+                {{ option.data.district }}{{ typeof option.data.address === 'string' ? option.data.address : '' }}
+              </div>
+            </li>
+          </ul>
+        </NScrollbar>
+      </NCard>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .address-picker {
+  position: relative;
   width: 100%;
 }
-</style>
 
-<style>
-/* 全局样式确保下拉菜单可见 */
-.address-picker-menu {
-  z-index: 20000 !important;
-  max-height: 300px;
+.picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin-top: 4px;
+  z-index: 20000;
 }
 
-/* 强制覆盖可能的 overflow 问题 */
-.n-auto-complete-menu .n-base-select-menu {
-  display: block !important;
+.loading-state {
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.options-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.option-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.option-item:hover {
+  background-color: rgba(255, 255, 255, 0.09);
+}
+
+.option-name {
+  font-size: 14px;
+  color: var(--n-text-color);
+  font-weight: 500;
+}
+
+.option-address {
+  font-size: 12px;
+  color: var(--n-text-color-3);
+  margin-top: 2px;
 }
 </style>

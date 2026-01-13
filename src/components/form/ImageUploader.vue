@@ -75,36 +75,45 @@ function handleRemove() {
 </script>
 
 <template>
-  <NUpload
-    v-model:file-list="fileList"
-    directory-dnd
-    :max="1"
-    accept="image/*"
-    list-type="image-card"
-    :custom-request="customRequest"
-    @remove="handleRemove"
-  >
-    <NUploadDragger v-if="fileList.length === 0">
-      <div class="dragger-content">
-        <NIcon size="30" :depth="3">
-          <CloudUploadOutline />
-        </NIcon>
-        <NText style="font-size: 12px; margin-top: 4px" depth="3">
-          上传图片
-        </NText>
-      </div>
-    </NUploadDragger>
-  </NUpload>
-  
-  <div class="upload-hint">
-    <NP depth="3" style="margin: 8px 0 0 0; font-size: 12px; line-height: 1.5;">
-      支持 JPG, PNG, WebP<br>
-      自动压缩至 1MB 以内
-    </NP>
+  <div class="image-uploader-wrapper">
+    <NUpload
+      v-model:file-list="fileList"
+      directory-dnd
+      :max="1"
+      accept="image/*"
+      list-type="image-card"
+      :custom-request="customRequest"
+      @remove="handleRemove"
+    >
+      <NUploadDragger v-if="fileList.length === 0">
+        <div class="dragger-content">
+          <NIcon size="30" :depth="3">
+            <CloudUploadOutline />
+          </NIcon>
+          <NText style="font-size: 12px; margin-top: 4px" depth="3">
+            上传图片
+          </NText>
+        </div>
+      </NUploadDragger>
+    </NUpload>
+    
+    <div class="upload-hint">
+      <NP depth="3" style="margin: 8px 0 0 0; font-size: 12px; line-height: 1.5;">
+        支持 JPG, PNG, WebP<br>
+        自动压缩至 1MB 以内
+      </NP>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.image-uploader-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
 :deep(.n-upload-trigger) {
   width: 96px;
   height: 96px;
@@ -128,6 +137,6 @@ function handleRemove() {
 }
 
 .upload-hint {
-  margin-top: 8px;
+  margin-top: 0;
 }
 </style>
