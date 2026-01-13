@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { NInput, NCard, NScrollbar, NSpin } from 'naive-ui'
+import { NInput, NCard, NScrollbar } from 'naive-ui'
 import AMapLoader from '@amap/amap-jsapi-loader'
 
 const emit = defineEmits(['select'])
@@ -8,7 +8,6 @@ const emit = defineEmits(['select'])
 const options = ref<any[]>([])
 const searchValue = ref('')
 const showDropdown = ref(false)
-const loading = ref(false)
 let autoComplete: any = null
 let AMapInstance: any = null
 
@@ -43,16 +42,12 @@ async function handleSearch(query: string) {
     return
   }
   
-  loading.value = true
-  showDropdown.value = true
-  
   // 开发环境调试日志
   if (import.meta.env.DEV) {
     console.log('Searching address:', query)
   }
 
   autoComplete.search(query, (status: string, result: any) => {
-    loading.value = false
     if (import.meta.env.DEV) {
       console.log('Search result:', status, result)
     }
@@ -65,8 +60,11 @@ async function handleSearch(query: string) {
           value: tip.name, // 使用名称作为value，避免选中后显示ID
           data: tip
         }))
+      // 只有真正有结果时才显示下拉框
+      showDropdown.value = options.value.length > 0
     } else {
       options.value = []
+      showDropdown.value = false
     }
   })
 }
@@ -128,13 +126,10 @@ function parseCity(district: string): string {
       @blur="handleBlur"
     />
     
-    <div v-show="showDropdown && (options.length > 0 || loading)" class="picker-dropdown">
+    <div v-show="showDropdown && options.length > 0" class="picker-dropdown">
       <NCard content-style="padding: 0;" :bordered="true">
         <NScrollbar style="max-height: 300px">
-          <div v-if="loading" class="loading-state">
-            <NSpin size="small" />
-          </div>
-          <ul v-else class="options-list">
+          <ul class="options-list">
             <li
               v-for="option in options"
               :key="option.data.id"
