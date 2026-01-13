@@ -25,7 +25,8 @@ onMounted(async () => {
     })
 
     autoComplete = new AMapInstance.AutoComplete({
-      city: '全国'
+      city: '全国',
+      datatype: 'all'
     })
   } catch (e) {
     console.error('AMap load failed', e)
@@ -37,30 +38,45 @@ async function handleSearch(query: string) {
     options.value = []
     return
   }
+  
+  // 开发环境调试日志
+  if (import.meta.env.DEV) {
+    console.log('Searching address:', query)
+  }
 
   autoComplete.search(query, (status: string, result: any) => {
+    if (import.meta.env.DEV) {
+      console.log('Search result:', status, result)
+    }
+    
     if (status === 'complete' && result.tips) {
       options.value = result.tips
-        .filter((tip: any) => tip.adcode) // 过滤掉没有行政区划代码的结果
+        .filter((tip: any) => tip.id && tip.location) // 确保有ID和坐标
         .map((tip: any) => ({
-          label: `${tip.name} (${tip.district}${tip.address})`,
-          value: tip.id,
+          label: `${tip.name} - ${tip.district || ''}${typeof tip.address === 'string' ? tip.address : ''}`,
+          value: tip.name, // 使用名称作为value，避免选中后显示ID
           data: tip
         }))
+    } else {
+      options.value = []
     }
   })
 }
 
 function handleSelect(value: string) {
-  const selectedTip = options.value.find(opt => opt.value === value)?.data
+  // 根据 label 或 value 查找选中项
+  const selectedOption = options.value.find(opt => opt.value === value)
+  const selectedTip = selectedOption?.data
+  
   if (selectedTip) {
     emit('select', {
       name: selectedTip.name,
-      address: selectedTip.address || selectedTip.name,
+      address: typeof selectedTip.address === 'string' ? selectedTip.address : selectedTip.district,
       city: parseCity(selectedTip.district),
       district: selectedTip.district,
       location: selectedTip.location
     })
+    // 选中后保持显示名称
     searchValue.value = selectedTip.name
   }
 }
@@ -82,9 +98,10 @@ function parseCity(district: string): string {
       :options="options"
       placeholder="输入餐厅名称或地址进行搜索"
       clearable
-      :menu-props="{ style: { zIndex: 9999 } }"
+      :menu-props="{ class: 'address-picker-menu' }"
       @search="handleSearch"
       @select="handleSelect"
+
     />
   </div>
 </template>
@@ -92,5 +109,18 @@ function parseCity(district: string): string {
 <style scoped>
 .address-picker {
   width: 100%;
+}
+</style>
+
+<style>
+/* 全局样式确保下拉菜单可见 */
+.address-picker-menu {
+  z-index: 20000 !important;
+  max-height: 300px;
+}
+
+/* 强制覆盖可能的 overflow 问题 */
+.n-auto-complete-menu .n-base-select-menu {
+  display: block !important;
 }
 </style>
