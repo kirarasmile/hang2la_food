@@ -197,6 +197,7 @@ const placeholderStyle = computed(() => ({
   color: var(--text-secondary);
   line-height: 1.5;
   position: relative;
+  font-style: italic;
 }
 
 .quote-icon {

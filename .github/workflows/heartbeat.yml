@@ -1,0 +1,16 @@
+name: Supabase Heartbeat
+
+on:
+  schedule:
+    - cron: '0 0 */3 * *' # 每3天运行一次
+  workflow_dispatch: # 支持手动触发
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          curl -X GET "${{ secrets.VITE_SUPABASE_URL }}/rest/v1/restaurants?select=id&limit=1" \
+          -H "apikey: ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}"

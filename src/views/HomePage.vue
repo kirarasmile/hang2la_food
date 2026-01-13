@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { NButton, NSpace, NTag } from 'naive-ui'
+import { ref, onMounted } from 'vue'
+import { NButton, NSpace, NTag, NAvatar, NDropdown, useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import FilterBar from '@/components/filter/FilterBar.vue'
 import TierBoard from '@/components/tier/TierBoard.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
@@ -10,8 +11,63 @@ import { useFilterStore } from '@/stores/filter'
 import type { Restaurant } from '@/types'
 
 const router = useRouter()
+const authStore = useAuthStore()
+const message = useMessage()
 const loading = ref(false)
 const filterStore = useFilterStore()
+
+// 初始化认证
+onMounted(async () => {
+  if (!authStore.initialized) {
+    await authStore.initialize()
+  }
+})
+
+// 用户菜单
+const userMenuOptions = [
+  {
+    label: '个人设置',
+    key: 'profile'
+  },
+  {
+    label: '退出登录',
+    key: 'logout'
+  }
+]
+
+// 管理员菜单
+const adminMenuOptions = [
+  {
+    label: '管理后台',
+    key: 'admin'
+  },
+  {
+    type: 'divider',
+    key: 'd1'
+  },
+  ...userMenuOptions
+]
+
+async function handleUserMenuSelect(key: string) {
+  switch (key) {
+    case 'logout':
+      const result = await authStore.signOut()
+      if (result.success) {
+        message.success('已退出登录')
+        router.push('/login')
+      } else {
+        message.error(result.message)
+      }
+      break
+    case 'admin':
+      router.push('/admin')
+      break
+    case 'profile':
+      // TODO: 个人设置页面
+      message.info('个人设置功能即将上线')
+      break
+  }
+}
 
 // 模拟静态数据（Phase 4 将连接 Supabase）
 const mockRestaurants = ref<Restaurant[]>([
@@ -200,14 +256,47 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaur
           美食从夯到拉排行榜
         </h1>
         
-        <NSpace>
+      <NSpace>
+        <!-- 未登录状态 -->
+        <template v-if="!authStore.isAuthenticated">
+          <NButton @click="router.push('/login')">
+            登录
+          </NButton>
+          <NButton type="primary" @click="router.push('/register')">
+            注册
+          </NButton>
+        </template>
+
+        <!-- 已登录状态 -->
+        <template v-else>
           <NButton type="primary" @click="router.push('/submit')">
             ✏️ 录入美食
           </NButton>
           <NButton @click="router.push('/map')">
             🗺️ 地图模式
           </NButton>
-        </NSpace>
+
+          <!-- 用户头像菜单 -->
+          <NDropdown
+            :options="authStore.isAdmin ? adminMenuOptions : userMenuOptions"
+            @select="handleUserMenuSelect"
+          >
+            <div class="user-avatar-wrapper">
+              <NAvatar
+                round
+                size="medium"
+                :src="authStore.profile?.avatar_url"
+                :fallback-src="'https://api.dicebear.com/7.x/avataaars/svg?seed=' + authStore.user?.email"
+              >
+                {{ authStore.profile?.nickname?.charAt(0) || authStore.user?.email?.charAt(0) }}
+              </NAvatar>
+              <span class="user-nickname">
+                {{ authStore.profile?.nickname || authStore.user?.email?.split('@')[0] }}
+              </span>
+            </div>
+          </NDropdown>
+        </template>
+      </NSpace>
       </div>
     </header>
     
@@ -285,22 +374,30 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaur
 
 .title-emoji {
   font-size: 32px;
-  animation: bounce 2s infinite;
 }
 
-.filter-sticky-wrapper {
-  position: sticky;
-  top: 73px; /* Header height (approx 72px) + 1px border */
-  z-index: 90;
-  margin: 0 -20px 24px;
-  padding: 12px 20px 12px;
-  background: linear-gradient(to bottom, var(--bg-primary) 80%, transparent);
-  pointer-events: none; /* Let clicks pass through empty areas */
+.user-avatar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 20px;
+  transition: background-color 0.2s;
 }
 
-/* Re-enable pointer events for the filter bar itself */
-.filter-sticky-wrapper > * {
-  pointer-events: auto;
+.user-avatar-wrapper:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-nickname {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-stats {
