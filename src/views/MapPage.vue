@@ -76,9 +76,11 @@ onUnmounted(() => {
   }
 })
 
-// 监听筛选结果变化
+// 监听筛选结果变化 (只在地图准备好后才筛选)
 watch(filteredRestaurants, () => {
-  filterByViewport()
+  if (mapReady.value) {
+    filterByViewport()
+  }
 }, { deep: true })
 
 // 监听可见餐厅变化来更新标记
@@ -190,29 +192,41 @@ async function initMap() {
 
 // 根据当前视野筛选餐厅
 function filterByViewport() {
-  if (!map.value || !viewportFilterEnabled.value) {
+  // 确保地图已准备好
+  if (!mapReady.value || !map.value || !viewportFilterEnabled.value) {
     visibleRestaurants.value = filteredRestaurants.value
     return
   }
 
-  const bounds = map.value.getBounds()
-  if (!bounds) {
+  try {
+    const bounds = map.value.getBounds()
+    if (!bounds) {
+      visibleRestaurants.value = filteredRestaurants.value
+      return
+    }
+
+    const ne = bounds.getNorthEast() // 东北角
+    const sw = bounds.getSouthWest() // 西南角
+    
+    // 检查边界坐标是否有效
+    if (!ne || !sw || isNaN(ne.lng) || isNaN(ne.lat) || isNaN(sw.lng) || isNaN(sw.lat)) {
+      visibleRestaurants.value = filteredRestaurants.value
+      return
+    }
+
+    visibleRestaurants.value = filteredRestaurants.value.filter(res => {
+      if (!res.longitude || !res.latitude) return false
+      return (
+        res.longitude >= sw.lng &&
+        res.longitude <= ne.lng &&
+        res.latitude >= sw.lat &&
+        res.latitude <= ne.lat
+      )
+    })
+  } catch (e) {
+    console.warn('filterByViewport error:', e)
     visibleRestaurants.value = filteredRestaurants.value
-    return
   }
-
-  const ne = bounds.getNorthEast() // 东北角
-  const sw = bounds.getSouthWest() // 西南角
-
-  visibleRestaurants.value = filteredRestaurants.value.filter(res => {
-    if (!res.longitude || !res.latitude) return false
-    return (
-      res.longitude >= sw.lng &&
-      res.longitude <= ne.lng &&
-      res.latitude >= sw.lat &&
-      res.latitude <= ne.lat
-    )
-  })
 }
 
 // 切换视野联动
