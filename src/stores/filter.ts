@@ -22,6 +22,14 @@ export const useFilterStore = defineStore('filter', () => {
   // 排序方式
   const sortBy = ref<'popular' | 'newest' | 'price-asc' | 'price-desc'>('popular')
 
+  // UI 状态：筛选栏是否折叠
+  const isFilterCollapsed = ref(false)
+
+  // 切换筛选栏折叠状态
+  function toggleFilterCollapse() {
+    isFilterCollapsed.value = !isFilterCollapsed.value
+  }
+
   // 重置所有筛选条件
   function resetFilters() {
     searchKeyword.value = ''
@@ -51,6 +59,8 @@ export const useFilterStore = defineStore('filter', () => {
     selectedTiers,
     selectedPriceRange,
     sortBy,
+    isFilterCollapsed,
+    toggleFilterCollapse,
     resetFilters,
     hasActiveFilters
   }

@@ -194,23 +194,30 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaur
 <template>
   <div class="home-page">
     <header class="page-header">
-      <h1 class="page-title">
-        <span class="title-emoji">🍜</span>
-        美食从夯到拉排行榜
-      </h1>
-      
-      <NSpace>
-        <NButton type="primary" @click="router.push('/submit')">
-          ✏️ 录入美食
-        </NButton>
-        <NButton @click="router.push('/map')">
-          🗺️ 地图模式
-        </NButton>
-      </NSpace>
+      <div class="header-content">
+        <h1 class="page-title">
+          <span class="title-emoji">🍜</span>
+          美食从夯到拉排行榜
+        </h1>
+        
+        <NSpace>
+          <NButton type="primary" @click="router.push('/submit')">
+            ✏️ 录入美食
+          </NButton>
+          <NButton @click="router.push('/map')">
+            🗺️ 地图模式
+          </NButton>
+        </NSpace>
+      </div>
     </header>
     
     <!-- 筛选栏 -->
-    <FilterBar />
+    <div class="filter-sticky-wrapper">
+      <FilterBar />
+      
+      <!-- 筛选结果统计 (Keep inside sticky wrapper or below? Below is better layout-wise but maybe inside looks integrated. Requirement says "Header sticky + filter collapse". Stats can move.) -->
+      <!-- Putting stats below filter bar, scrolling with page -->
+    </div>
 
     <!-- 筛选结果统计 -->
     <div class="filter-stats" v-if="filterStore.hasActiveFilters()">
@@ -239,13 +246,25 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaur
 <style scoped>
 .home-page {
   min-height: 100vh;
-  padding: 20px;
+  padding: 0 20px 20px; /* Remove top padding, handle in header */
   background-color: var(--bg-primary);
 }
 
 .page-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin: 0 -20px 0; /* Full width background */
+  padding: 16px 20px;
+  transition: all 0.3s ease;
+}
+
+.header-content {
   max-width: 1400px;
-  margin: 0 auto 24px;
+  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -261,10 +280,27 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaur
   align-items: center;
   gap: 12px;
   margin: 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .title-emoji {
   font-size: 32px;
+  animation: bounce 2s infinite;
+}
+
+.filter-sticky-wrapper {
+  position: sticky;
+  top: 73px; /* Header height (approx 72px) + 1px border */
+  z-index: 90;
+  margin: 0 -20px 24px;
+  padding: 12px 20px 12px;
+  background: linear-gradient(to bottom, var(--bg-primary) 80%, transparent);
+  pointer-events: none; /* Let clicks pass through empty areas */
+}
+
+/* Re-enable pointer events for the filter bar itself */
+.filter-sticky-wrapper > * {
+  pointer-events: auto;
 }
 
 .filter-stats {
@@ -277,13 +313,25 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaur
   width: 100%;
 }
 
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
 /* 移动端适配 */
 @media (max-width: 768px) {
   .home-page {
-    padding: 12px;
+    padding: 0 12px 12px;
   }
   
   .page-header {
+    margin: 0 -12px 0;
+    padding: 12px;
+    position: sticky;
+    top: 0;
+  }
+  
+  .header-content {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -294,6 +342,12 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaur
   
   .title-emoji {
     font-size: 26px;
+  }
+
+  .filter-sticky-wrapper {
+    top: 106px; /* Adjusted for mobile header height (approx) */
+    margin: 0 -12px 16px;
+    padding: 8px 12px;
   }
 }
 </style>
