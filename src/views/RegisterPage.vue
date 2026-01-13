@@ -94,12 +94,15 @@ async function handleRegister() {
     )
 
     if (result.success) {
-      // 3. 使用邀请码
+      // 3. 使用邀请码 (确保扣除次数)
       if (authStore.user) {
-        await useInviteCode(formData.value.inviteCode, authStore.user.id)
+        const useResult = await useInviteCode(formData.value.inviteCode, authStore.user.id)
+        if (!useResult.success) {
+          console.error('Invite code deduction failed:', useResult.message)
+        }
       }
 
-      message.success('注册成功！请查收邮箱验证邮件')
+      message.success('注册成功！请登录')
       
       // 延迟跳转到登录页
       setTimeout(() => {

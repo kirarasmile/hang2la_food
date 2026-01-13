@@ -85,17 +85,17 @@ function handleRemove() {
     @remove="handleRemove"
   >
     <NUploadDragger v-if="fileList.length === 0">
-      <div style="margin-bottom: 12px">
+      <div class="dragger-content">
         <NIcon size="48" :depth="3">
           <CloudUploadOutline />
         </NIcon>
+        <NText style="font-size: 14px; margin-top: 8px">
+          点击或拖拽图片到此处上传
+        </NText>
+        <NP depth="3" style="margin: 4px 0 0 0; font-size: 12px">
+          支持 JPG, PNG, WebP (压缩后不超过 1MB)
+        </NP>
       </div>
-      <NText style="font-size: 14px">
-        点击或拖拽图片到此处上传
-      </NText>
-      <NP depth="3" style="margin: 8px 0 0 0; font-size: 12px">
-        支持 JPG, PNG, WebP (压缩后不超过 1MB)
-      </NP>
     </NUploadDragger>
   </NUpload>
 </template>
@@ -103,5 +103,13 @@ function handleRemove() {
 <style scoped>
 :deep(.n-upload-trigger) {
   width: 100%;
+}
+
+.dragger-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
 }
 </style>

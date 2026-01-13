@@ -82,6 +82,7 @@ function parseCity(district: string): string {
       :options="options"
       placeholder="输入餐厅名称或地址进行搜索"
       clearable
+      :menu-props="{ style: { zIndex: 9999 } }"
       @search="handleSearch"
       @select="handleSelect"
     />

@@ -132,10 +132,20 @@ async function initMap() {
     map.value.addControl(new AMap.value.ToolBar())
     map.value.addControl(new AMap.value.Scale())
     
-    // 监听地图移动结束，可用于按视野筛选（当前仅作为示例，实际数据过滤由 useFilter 处理）
-    map.value.on('moveend', () => {
-      // const bounds = map.value.getBounds()
-      // console.log('Current bounds:', bounds)
+    // 自动定位
+    const geolocation = new AMap.value.Geolocation({
+      enableHighAccuracy: true,
+      timeout: 10000,
+      offset: [10, 20],
+      zoomToAccuracy: true,
+      position: 'RB'
+    })
+    map.value.addControl(geolocation)
+    geolocation.getCurrentPosition((status: string, result: any) => {
+      if (status === 'complete') {
+        map.value.setCenter([result.position.lng, result.position.lat])
+        map.value.setZoom(15)
+      }
     })
 
     updateMarkers()
@@ -269,6 +279,10 @@ function handleBack() {
 .map-container {
   flex: 1;
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
 }
 
 :deep(.custom-marker) {
