@@ -1,0 +1,26 @@
+/* src/assets/styles/variables.css */
+
+:root {
+  /* Tier 颜色 */
+  --tier-hang: #FFD700;
+  --tier-top: #B026FF;
+  --tier-elite: #1E90FF;
+  --tier-npc: #A9A9A9;
+  --tier-la: #FF4500;
+
+  /* 深色主题 */
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #262626;
+  --bg-tier-row: #2a2a2a;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  
+  --border-color: #3a3a3a;
+  --border-radius: 8px;
+  
+  /* 动效 */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}
