@@ -327,27 +327,30 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaur
   .page-header {
     margin: 0 -12px 0;
     padding: 12px;
-    position: sticky;
+    position: relative; /* Not sticky on mobile to save space */
     top: 0;
   }
   
   .header-content {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
   
   .page-title {
-    font-size: 22px;
+    font-size: 18px;
   }
   
   .title-emoji {
-    font-size: 26px;
+    font-size: 24px;
   }
 
   .filter-sticky-wrapper {
-    top: 106px; /* Adjusted for mobile header height (approx) */
+    top: 0; /* Sticky to top of viewport since header is not sticky */
     margin: 0 -12px 16px;
     padding: 8px 12px;
+    background: var(--bg-primary); /* Ensure solid background when sticky */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05); /* Add border for separation */
   }
 }
 </style>

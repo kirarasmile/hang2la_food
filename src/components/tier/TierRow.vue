@@ -23,10 +23,6 @@ defineProps<{
             :restaurant="restaurant"
             class="stagger-item"
           />
-          
-          <div v-if="restaurants.length === 0" class="empty-placeholder">
-            <span class="empty-text">暂无数据</span>
-          </div>
         </div>
       </NScrollbar>
     </div>
@@ -41,52 +37,23 @@ defineProps<{
   border-radius: var(--border-radius);
   overflow: hidden;
   margin-bottom: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05); /* 微弱边框增加精致感 */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .tier-content {
   flex: 1;
   overflow: hidden;
+  display: flex; /* 确保内容撑满 */
+  flex-direction: column;
 }
 
 .card-list {
   display: flex;
   gap: 16px;
   padding: 16px;
-  min-height: 180px;
-}
-
-.empty-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 200px;
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-.empty-text {
-  opacity: 0.5;
-}
-
-/* "夯" 行添加流光特效 */
-.tier-row-hang .tier-label {
-  animation: shine 3s linear infinite;
-  background: linear-gradient(
-    90deg,
-    var(--tier-hang) 0%,
-    #fffacd 50%,
-    var(--tier-hang) 100%
-  );
-  background-size: 200% 100%;
-}
-
-@keyframes shine {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
+  min-height: 100%; /* 撑满高度 */
+  align-items: center; /* 垂直居中卡片 */
 }
 
 /* 移动端适配 */
@@ -99,6 +66,7 @@ defineProps<{
   .card-list {
     flex-wrap: wrap;
     gap: 12px;
+    padding-bottom: 16px;
   }
 }
 </style>

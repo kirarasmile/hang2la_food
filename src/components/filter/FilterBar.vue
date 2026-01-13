@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { NCard, NButton, NCollapseTransition } from 'naive-ui'
+import { ref, computed } from 'vue'
+import { NCard, NButton, NCollapseTransition, NDrawer, NDrawerContent, NIcon, NBadge } from 'naive-ui'
+import { Filter as FilterIcon } from '@vicons/ionicons5'
 import CitySelect from './CitySelect.vue'
 import CategorySelect from './CategorySelect.vue'
 import TierFilter from './TierFilter.vue'
@@ -9,76 +11,156 @@ import SortSelect from './SortSelect.vue'
 import { useFilterStore } from '@/stores/filter'
 
 const filterStore = useFilterStore()
+const showMobileDrawer = ref(false)
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (filterStore.selectedCity) count++
+  count += filterStore.selectedCategories.length
+  count += filterStore.selectedTiers.length
+  if (filterStore.selectedPriceRange) count++
+  if (filterStore.sortBy !== 'popular') count++
+  return count
+})
+
+function handleReset() {
+  filterStore.resetFilters()
+  // showMobileDrawer.value = false // Optional: close on reset? specific requirements say keep functionality.
+}
 </script>
 
 <template>
   <div class="filter-bar">
     <div class="filter-container">
-      <NCard class="filter-card" :bordered="false" content-style="padding: 16px;">
+      <NCard class="filter-card" :bordered="false" content-style="padding: 0;">
         <div class="filter-content">
           <!-- 搜索框与折叠按钮行 -->
           <div class="filter-row header-row">
             <div class="search-wrapper">
-              <SearchInput />
+              <SearchInput class="search-input-responsive" />
             </div>
-            <NButton 
-              quaternary
-              size="small"
-              @click="filterStore.toggleFilterCollapse()"
-              class="collapse-btn"
-            >
-              <span class="collapse-icon">{{ filterStore.isFilterCollapsed ? '🔽' : '🔼' }}</span>
-              {{ filterStore.isFilterCollapsed ? '展开筛选' : '收起' }}
-            </NButton>
+            
+            <!-- Desktop Toggle -->
+            <div class="desktop-toggle">
+              <NButton 
+                quaternary
+                size="small"
+                @click="filterStore.toggleFilterCollapse()"
+                class="collapse-btn"
+              >
+                <span class="collapse-icon">{{ filterStore.isFilterCollapsed ? '🔽' : '🔼' }}</span>
+                {{ filterStore.isFilterCollapsed ? '展开筛选' : '收起' }}
+              </NButton>
+            </div>
+
+            <!-- Mobile Toggle -->
+            <div class="mobile-toggle">
+              <NBadge :value="activeFilterCount" :show="activeFilterCount > 0" :max="99">
+                <NButton 
+                  secondary 
+                  circle
+                  @click="showMobileDrawer = true"
+                  class="mobile-filter-btn"
+                >
+                  <template #icon>
+                    <NIcon><FilterIcon /></NIcon>
+                  </template>
+                </NButton>
+              </NBadge>
+            </div>
           </div>
 
-          <!-- 可折叠的主要筛选条件 -->
-          <NCollapseTransition :show="!filterStore.isFilterCollapsed">
-            <div class="filter-row main-filters">
-              <div class="filter-item">
-                <label class="filter-label">城市</label>
-                <CitySelect />
-              </div>
+          <!-- 可折叠的主要筛选条件 (Desktop) -->
+          <div class="desktop-filters">
+            <NCollapseTransition :show="!filterStore.isFilterCollapsed">
+              <div class="filter-row main-filters">
+                <div class="filter-item">
+                  <label class="filter-label">城市</label>
+                  <CitySelect />
+                </div>
 
-              <div class="filter-item">
-                <label class="filter-label">分类</label>
-                <CategorySelect />
-              </div>
+                <div class="filter-item">
+                  <label class="filter-label">分类</label>
+                  <CategorySelect />
+                </div>
 
-              <div class="filter-item">
-                <label class="filter-label">评级</label>
-                <TierFilter />
-              </div>
+                <div class="filter-item">
+                  <label class="filter-label">评级</label>
+                  <TierFilter />
+                </div>
 
-              <div class="filter-item">
-                <label class="filter-label">价格区间</label>
-                <PriceRangeSlider />
-              </div>
+                <div class="filter-item">
+                  <label class="filter-label">价格区间</label>
+                  <PriceRangeSlider />
+                </div>
 
-              <div class="filter-item">
-                <label class="filter-label">排序</label>
-                <SortSelect />
+                <div class="filter-item">
+                  <label class="filter-label">排序</label>
+                  <SortSelect />
+                </div>
               </div>
-            </div>
-          </NCollapseTransition>
+            </NCollapseTransition>
+          </div>
         </div>
       </NCard>
     </div>
+
+    <!-- Mobile Drawer -->
+    <NDrawer v-model:show="showMobileDrawer" placement="bottom" height="85vh" class="mobile-filter-drawer">
+      <NDrawerContent title="筛选条件" closable>
+        <div class="drawer-filters">
+          <div class="drawer-filter-item">
+            <label class="filter-label">城市</label>
+            <CitySelect />
+          </div>
+
+          <div class="drawer-filter-item">
+            <label class="filter-label">分类</label>
+            <CategorySelect />
+          </div>
+
+          <div class="drawer-filter-item">
+            <label class="filter-label">评级</label>
+            <TierFilter />
+          </div>
+
+          <div class="drawer-filter-item">
+            <label class="filter-label">价格区间</label>
+            <PriceRangeSlider />
+          </div>
+
+          <div class="drawer-filter-item">
+            <label class="filter-label">排序</label>
+            <SortSelect />
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="drawer-footer">
+            <NButton secondary @click="handleReset" class="drawer-btn">
+              重置
+            </NButton>
+            <NButton type="primary" @click="showMobileDrawer = false" class="drawer-btn">
+              完成
+            </NButton>
+          </div>
+        </template>
+      </NDrawerContent>
+    </NDrawer>
   </div>
 </template>
 
 <style scoped>
 .filter-bar {
-  /* Sticky positioning handled in HomePage or here with calculation */
   width: 100%;
   z-index: 90;
-  pointer-events: none; /* Allow clicking through empty space */
+  pointer-events: none;
 }
 
 .filter-container {
   max-width: 1400px;
   margin: 0 auto;
-  pointer-events: auto; /* Re-enable clicks */
+  pointer-events: auto;
 }
 
 .filter-card {
@@ -90,9 +172,9 @@ const filterStore = useFilterStore()
 }
 
 .filter-content {
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 
 .filter-row {
@@ -115,6 +197,7 @@ const filterStore = useFilterStore()
   max-width: 400px;
 }
 
+/* Desktop Filters Styles */
 .main-filters {
   padding-top: 20px;
   width: 100%;
@@ -147,29 +230,70 @@ const filterStore = useFilterStore()
   margin-right: 4px;
 }
 
-/* 移动端适配 */
+/* Visibility Control */
+.mobile-toggle {
+  display: none;
+}
+
+.desktop-toggle {
+  display: block;
+}
+
+.desktop-filters {
+  display: block;
+}
+
+/* Drawer Styles */
+.drawer-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 0;
+}
+
+.drawer-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-footer {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.drawer-btn {
+  flex: 1;
+}
+
+/* Mobile Adaptation */
 @media (max-width: 768px) {
+  .filter-content {
+    padding: 12px;
+  }
+
+  .header-row {
+    gap: 12px;
+  }
+
   .search-wrapper {
     max-width: 100%;
   }
-  
-  .filter-row {
-    gap: 12px;
+
+  /* Hide Desktop elements */
+  .desktop-toggle {
+    display: none;
   }
   
-  .main-filters {
-    padding-top: 16px;
-    margin-top: 12px;
+  .desktop-filters {
+    display: none;
   }
 
-  .filter-item {
-    flex: 1 1 100%;
-    min-width: 100%;
-  }
-
-  .filter-label {
-    min-width: 48px;
-    font-size: 13px;
+  /* Show Mobile elements */
+  .mobile-toggle {
+    display: block;
   }
 }
 </style>

@@ -4,6 +4,10 @@ import { useFilterStore } from '@/stores/filter'
 import { storeToRefs } from 'pinia'
 import { ref, watch } from 'vue'
 
+defineProps<{
+  size?: 'small' | 'medium' | 'large'
+}>()
+
 const filterStore = useFilterStore()
 const { searchKeyword } = storeToRefs(filterStore)
 
@@ -29,7 +33,7 @@ watch(localInput, (newValue) => {
     v-model:value="localInput"
     placeholder="🔍 搜索餐厅名称、地址..."
     clearable
-    size="large"
+    :size="size || 'large'"
     style="width: 100%; max-width: 600px"
   />
 </template>
