@@ -8,20 +8,51 @@ import TierBoard from '@/components/tier/TierBoard.vue'
 import LoadingSkeleton from '@/components/common/LoadingSkeleton.vue'
 import { useFilter } from '@/composables/useFilter'
 import { useFilterStore } from '@/stores/filter'
+import { supabase } from '@/api/supabase'
 import type { Restaurant } from '@/types'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const message = useMessage()
-const loading = ref(false)
+const loading = ref(true)
 const filterStore = useFilterStore()
+const restaurants = ref<Restaurant[]>([])
 
-// 初始化认证
+// 初始化认证和数据
 onMounted(async () => {
   if (!authStore.initialized) {
     await authStore.initialize()
   }
+  await fetchRestaurants()
 })
+
+// 从数据库获取餐厅数据
+async function fetchRestaurants() {
+  loading.value = true
+  try {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    
+    if (data && data.length > 0) {
+      restaurants.value = data as Restaurant[]
+      console.log('[HomePage] Loaded', data.length, 'restaurants from database')
+    } else {
+      console.log('[HomePage] No restaurants in database')
+      restaurants.value = []
+    }
+  } catch (error: any) {
+    console.error('[HomePage] Failed to fetch restaurants:', error.message)
+    message.error('加载数据失败，请稍后重试')
+    restaurants.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 // 用户菜单
 const userMenuOptions = [
@@ -69,182 +100,8 @@ async function handleUserMenuSelect(key: string) {
   }
 }
 
-// 模拟静态数据（Phase 4 将连接 Supabase）
-const mockRestaurants = ref<Restaurant[]>([
-  {
-    id: '1',
-    name: '海底捞火锅',
-    tier: 'hang',
-    category: 'hotpot',
-    price_per_person: 120,
-    address: '上海市黄浦区南京东路123号',
-    city: '上海',
-    district: '黄浦区',
-    recommendation: '服务超级好！番茄锅底绝了，必点毛肚和虾滑',
-    created_by: 'demo',
-    created_at: new Date('2025-01-10').toISOString(),
-    updated_at: new Date('2025-01-10').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '2',
-    name: '鼎泰丰',
-    tier: 'top',
-    category: 'chinese',
-    price_per_person: 150,
-    address: '上海市静安区南京西路1376号',
-    city: '上海',
-    district: '静安区',
-    recommendation: '小笼包皮薄汁多，18个褶子真不是吹的',
-    created_by: 'demo',
-    created_at: new Date('2025-01-11').toISOString(),
-    updated_at: new Date('2025-01-11').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '3',
-    name: '麦当劳',
-    tier: 'npc',
-    category: 'fastfood',
-    price_per_person: 35,
-    address: '上海市浦东新区世纪大道8号',
-    city: '上海',
-    recommendation: '板烧鸡腿堡永远的神，早餐麦满分也不错',
-    created_by: 'demo',
-    created_at: new Date('2025-01-09').toISOString(),
-    updated_at: new Date('2025-01-09').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '4',
-    name: '某黑暗料理店',
-    tier: 'la',
-    category: 'other',
-    price_per_person: 200,
-    address: '上海市徐汇区衡山路99号',
-    city: '上海',
-    recommendation: '千万别去！又贵又难吃，服务态度还差，纯纯智商税',
-    created_by: 'demo',
-    created_at: new Date('2025-01-08').toISOString(),
-    updated_at: new Date('2025-01-08').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '5',
-    name: '星巴克',
-    tier: 'elite',
-    category: 'drinks',
-    price_per_person: 40,
-    address: '北京市朝阳区建国门外大街1号',
-    city: '北京',
-    recommendation: '咖啡稳定，环境不错，适合办公和闲聊',
-    created_by: 'demo',
-    created_at: new Date('2025-01-12').toISOString(),
-    updated_at: new Date('2025-01-12').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '6',
-    name: '喜茶',
-    tier: 'top',
-    category: 'drinks',
-    price_per_person: 28,
-    address: '广州市天河区天河路208号',
-    city: '广州',
-    recommendation: '芝芝莓莓真的好喝！多肉葡萄也推荐',
-    created_by: 'demo',
-    created_at: new Date('2025-01-13').toISOString(),
-    updated_at: new Date('2025-01-13').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '7',
-    name: '九毛九山西面馆',
-    tier: 'elite',
-    category: 'chinese',
-    price_per_person: 65,
-    address: '深圳市福田区福华三路118号',
-    city: '深圳',
-    recommendation: '油泼面绝了，分量足价格实惠',
-    created_by: 'demo',
-    created_at: new Date('2025-01-07').toISOString(),
-    updated_at: new Date('2025-01-07').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '8',
-    name: '胖哥俩肉蟹煲',
-    tier: 'hang',
-    category: 'chinese',
-    price_per_person: 180,
-    address: '杭州市西湖区文三路218号',
-    city: '杭州',
-    recommendation: '肉蟹煲超级香！配米饭简直无敌',
-    created_by: 'demo',
-    created_at: new Date('2025-01-06').toISOString(),
-    updated_at: new Date('2025-01-06').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '9',
-    name: '权金城',
-    tier: 'top',
-    category: 'korean',
-    price_per_person: 90,
-    address: '北京市海淀区中关村大街1号',
-    city: '北京',
-    recommendation: '烤五花肉很好吃，石锅拌饭也不错',
-    created_by: 'demo',
-    created_at: new Date('2025-01-05').toISOString(),
-    updated_at: new Date('2025-01-05').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '10',
-    name: '蛙小侠',
-    tier: 'elite',
-    category: 'hotpot',
-    price_per_person: 75,
-    address: '成都市武侯区天府三街99号',
-    city: '成都',
-    recommendation: '牛蛙火锅很新鲜，辣度刚好',
-    created_by: 'demo',
-    created_at: new Date('2025-01-04').toISOString(),
-    updated_at: new Date('2025-01-04').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '11',
-    name: 'Lady M',
-    tier: 'hang',
-    category: 'dessert',
-    price_per_person: 88,
-    address: '上海市黄浦区淮海中路999号',
-    city: '上海',
-    recommendation: '千层蛋糕一绝，入口即化',
-    created_by: 'demo',
-    created_at: new Date('2025-01-03').toISOString(),
-    updated_at: new Date('2025-01-03').toISOString(),
-    is_deleted: false
-  },
-  {
-    id: '12',
-    name: 'KFC肯德基',
-    tier: 'npc',
-    category: 'fastfood',
-    price_per_person: 38,
-    address: '武汉市江汉区解放大道688号',
-    city: '武汉',
-    recommendation: '疯四就是稳，吮指原味鸡永远OK',
-    created_by: 'demo',
-    created_at: new Date('2025-01-02').toISOString(),
-    updated_at: new Date('2025-01-02').toISOString(),
-    is_deleted: false
-  }
-])
-
 // 应用筛选逻辑
-const { filteredRestaurants, filteredCount, totalCount } = useFilter(mockRestaurants)
+const { filteredRestaurants, filteredCount, totalCount } = useFilter(restaurants)
 </script>
 
 <template>

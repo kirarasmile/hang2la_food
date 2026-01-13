@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { NInput, NCard, NScrollbar } from 'naive-ui'
 import AMapLoader from '@amap/amap-jsapi-loader'
 
@@ -10,15 +10,26 @@ const searchValue = ref('')
 const showDropdown = ref(false)
 let autoComplete: any = null
 let AMapInstance: any = null
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 onMounted(async () => {
   try {
     const key = import.meta.env.VITE_AMAP_KEY
+    const securityJsCode = import.meta.env.VITE_AMAP_SECRET
+    
     if (!key) {
-      console.warn('AMap Key is missing')
+      console.warn('[AddressPicker] AMap Key is missing')
       return
     }
 
+    // 高德地图 2.0 需要安全密钥
+    if (securityJsCode && !(window as any)._AMapSecurityConfig) {
+      (window as any)._AMapSecurityConfig = {
+        securityJsCode,
+      }
+    }
+
+    console.log('[AddressPicker] Loading AMap...')
     AMapInstance = await AMapLoader.load({
       key,
       version: '2.0',
@@ -29,39 +40,51 @@ onMounted(async () => {
       city: '全国',
       datatype: 'all'
     })
+    console.log('[AddressPicker] AMap loaded, autoComplete ready')
   } catch (e) {
-    console.error('AMap load failed', e)
+    console.error('[AddressPicker] AMap load failed', e)
   }
 })
 
-async function handleSearch(query: string) {
-  searchValue.value = query
-  if (!query || !autoComplete) {
+// 使用 watch 监听输入变化，带防抖
+watch(searchValue, (newValue) => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  
+  if (!newValue || newValue.trim().length === 0) {
     options.value = []
     showDropdown.value = false
     return
   }
   
-  // 开发环境调试日志
-  if (import.meta.env.DEV) {
-    console.log('Searching address:', query)
+  // 300ms 防抖
+  searchTimeout = setTimeout(() => {
+    performSearch(newValue.trim())
+  }, 300)
+})
+
+function performSearch(query: string) {
+  if (!autoComplete) {
+    console.warn('[AddressPicker] autoComplete not ready')
+    return
   }
 
+  console.log('[AddressPicker] Searching:', query)
+
   autoComplete.search(query, (status: string, result: any) => {
-    if (import.meta.env.DEV) {
-      console.log('Search result:', status, result)
-    }
+    console.log('[AddressPicker] Result:', status, result)
     
     if (status === 'complete' && result.tips) {
       options.value = result.tips
-        .filter((tip: any) => tip.id && tip.location) // 确保有ID和坐标
+        .filter((tip: any) => tip.id && tip.location)
         .map((tip: any) => ({
           label: `${tip.name} - ${tip.district || ''}${typeof tip.address === 'string' ? tip.address : ''}`,
-          value: tip.name, // 使用名称作为value，避免选中后显示ID
+          value: tip.name,
           data: tip
         }))
-      // 只有真正有结果时才显示下拉框
       showDropdown.value = options.value.length > 0
+      console.log('[AddressPicker] Found', options.value.length, 'results')
     } else {
       options.value = []
       showDropdown.value = false
@@ -121,7 +144,6 @@ function parseCity(district: string): string {
       v-model:value="searchValue"
       placeholder="输入餐厅名称或地址进行搜索"
       clearable
-      @input="handleSearch"
       @focus="handleFocus"
       @blur="handleBlur"
     />
