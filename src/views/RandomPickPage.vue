@@ -2,7 +2,8 @@
 import { ref, onMounted, computed, reactive } from 'vue'
 import { 
   NButton, NSpace, NCard, NSlider, 
-  NCheckboxGroup, NCheckbox, NGrid, NGi, useMessage
+  NCheckboxGroup, NCheckbox, NGrid, NGi, useMessage,
+  NCollapse, NCollapseItem
 } from 'naive-ui'
 import { useRouter } from 'vue-router'
 import { ArrowBackOutline, DiceOutline, RefreshOutline } from '@vicons/ionicons5'
@@ -186,52 +187,58 @@ function handleBack() {
         <!-- 筛选面板 -->
         <NGi span="24 m:8">
           <NCard title="⚙️ 筛选偏好" :bordered="false" class="filter-card">
-            <NSpace vertical :size="20">
-              <div class="filter-item">
-                <div class="filter-label">最大距离: {{ filters.maxDistance }}m</div>
-                <NSlider v-model:value="filters.maxDistance" :min="500" :max="5000" :step="100" />
-              </div>
+            <NCollapse :default-expanded-names="['filters']" arrow-placement="right">
+              <NCollapseItem title="点击修改偏好" name="filters">
+                <template #header-extra>
+                  <span class="filter-summary">距离/价格/评分</span>
+                </template>
+                <NSpace vertical :size="16" class="filter-items-container">
+                  <div class="filter-item">
+                    <div class="filter-label">最大距离: {{ filters.maxDistance }}m</div>
+                    <NSlider v-model:value="filters.maxDistance" :min="500" :max="5000" :step="100" />
+                  </div>
 
-              <div class="filter-item">
-                <div class="filter-label">最高人均: ¥{{ filters.maxPrice }}</div>
-                <NSlider v-model:value="filters.maxPrice" :min="0" :max="500" :step="10" />
-              </div>
+                  <div class="filter-item">
+                    <div class="filter-label">最高人均: ¥{{ filters.maxPrice }}</div>
+                    <NSlider v-model:value="filters.maxPrice" :min="0" :max="500" :step="10" />
+                  </div>
 
-              <div class="filter-item">
-                <div class="filter-label">评分偏好:</div>
-                <NCheckboxGroup v-model:value="filters.tiers">
-                  <NGrid :cols="3">
-                    <NGi v-for="(config, key) in TIER_CONFIG" :key="key">
-                      <NCheckbox :value="key" :label="config.emoji + ' ' + config.label" />
-                    </NGi>
-                  </NGrid>
-                </NCheckboxGroup>
-              </div>
+                  <div class="filter-item">
+                    <div class="filter-label">评分偏好:</div>
+                    <NCheckboxGroup v-model:value="filters.tiers">
+                      <NGrid :cols="3">
+                        <NGi v-for="(config, key) in TIER_CONFIG" :key="key">
+                          <NCheckbox :value="key" :label="config.emoji + ' ' + config.label" />
+                        </NGi>
+                      </NGrid>
+                    </NCheckboxGroup>
+                  </div>
 
-              <div class="filter-item">
-                <div class="filter-label">菜系偏好:</div>
-                <NCheckboxGroup v-model:value="filters.categories">
-                  <NGrid :cols="2">
-                    <NGi v-for="(config, key) in CATEGORY_CONFIG" :key="key">
-                      <NCheckbox :value="key" :label="config.emoji + ' ' + config.label" />
-                    </NGi>
-                  </NGrid>
-                </NCheckboxGroup>
-              </div>
-              
-                <NButton 
-                type="primary" 
-                block 
-                size="large" 
-                @click="startSpin" 
-                :loading="isSpinning"
-                class="spin-button"
-              >
-                <template #icon><DiceOutline /></template>
-                开始随机挑选
-              </NButton>
-
-            </NSpace>
+                  <div class="filter-item">
+                    <div class="filter-label">菜系偏好:</div>
+                    <NCheckboxGroup v-model:value="filters.categories">
+                      <NGrid :cols="2">
+                        <NGi v-for="(config, key) in CATEGORY_CONFIG" :key="key">
+                          <NCheckbox :value="key" :label="config.emoji + ' ' + config.label" />
+                        </NGi>
+                      </NGrid>
+                    </NCheckboxGroup>
+                  </div>
+                </NSpace>
+              </NCollapseItem>
+            </NCollapse>
+            
+            <NButton 
+              type="primary" 
+              block 
+              size="large" 
+              @click="startSpin" 
+              :loading="isSpinning"
+              class="spin-button"
+            >
+              <template #icon><DiceOutline /></template>
+              开始随机挑选
+            </NButton>
           </NCard>
         </NGi>
 
@@ -316,9 +323,19 @@ function handleBack() {
   font-size: 18px;
   font-weight: 700;
   border-radius: 12px;
-  margin-top: 12px;
+  margin-top: 20px;
   background: linear-gradient(135deg, #18a058 0%, #0c7a43 100%);
   box-shadow: 0 4px 12px rgba(24, 160, 88, 0.3);
+}
+
+.filter-summary {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
+
+.filter-items-container {
+  padding: 8px 0;
 }
 
 .display-container {
@@ -439,15 +456,24 @@ function handleBack() {
   .random-pick-page {
     padding: 12px;
   }
+  .page-header {
+    margin-bottom: 12px;
+  }
   .display-container {
-    height: 400px;
-    margin-top: 20px;
+    height: 380px;
+    margin-top: 12px;
+    border-radius: 16px;
   }
   .result-card-wrapper {
-    transform: scale(1);
+    transform: scale(0.95);
     width: 100%;
     display: flex;
     justify-content: center;
+  }
+  .spin-button {
+    height: 48px;
+    font-size: 16px;
+    margin-top: 12px;
   }
 }
 </style>
