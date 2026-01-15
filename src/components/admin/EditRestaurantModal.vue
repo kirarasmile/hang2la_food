@@ -20,12 +20,26 @@ async function handleSubmit(formData: any) {
   
   loading.value = true
   try {
+    // 只保留 restaurants 表中实际存在的可更新字段
+    // 排除聚合字段 (upvotes, downvotes, user_vote) 和系统字段 (id, created_by, created_at, is_deleted 等)
+    const updateData = {
+      name: formData.name,
+      tier: formData.tier,
+      category: formData.category,
+      price_per_person: formData.price_per_person,
+      address: formData.address,
+      city: formData.city,
+      district: formData.district,
+      latitude: formData.latitude,
+      longitude: formData.longitude,
+      recommendation: formData.recommendation,
+      image_url: formData.image_url,
+      updated_at: new Date().toISOString()
+    }
+
     const { error } = await supabase
       .from('restaurants')
-      .update({
-        ...formData,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', props.restaurant.id)
 
     if (error) throw error
