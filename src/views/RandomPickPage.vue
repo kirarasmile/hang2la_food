@@ -34,7 +34,14 @@ const filters = reactive({
 const isSpinning = ref(false)
 const resultRestaurant = ref<Restaurant | null>(null)
 
+// PC端默认展开筛选面板
+const expandedNames = ref<string[]>([])
+
 onMounted(async () => {
+  // PC端默认展开偏好设置
+  if (window.innerWidth >= 769) {
+    expandedNames.value = ['filters']
+  }
   await fetchAll()
   await getCurrentLocation()
 })
@@ -186,7 +193,7 @@ function handleBack() {
       <!-- 筛选面板 -->
       <div class="filter-section">
         <NCard title="⚙️ 筛选偏好" :bordered="false" class="filter-card">
-          <NCollapse arrow-placement="right">
+          <NCollapse v-model:expanded-names="expandedNames" arrow-placement="right">
             <NCollapseItem title="点击修改偏好" name="filters">
               <template #header-extra>
                 <span class="filter-summary">距离/价格/评分</span>

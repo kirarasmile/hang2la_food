@@ -195,6 +195,11 @@ const placeholderStyle = computed(() => ({
 
 .card-content-wrapper {
   padding: 4px 0 0;
+  /* 防止内容溢出容器 */
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .card-header {
@@ -279,10 +284,21 @@ const placeholderStyle = computed(() => ({
   min-height: 46px; /* 确保高度一致，约两行文字的高度 */
   display: flex;
   align-items: center;
+  /* 防止文本溢出 */
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .recommendation-box :deep(.n-ellipsis) {
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .recommendation-box:not(:has(.quote-icon)) {
@@ -311,6 +327,11 @@ const placeholderStyle = computed(() => ({
   .card-image,
   .card-image-placeholder {
     height: 180px; /* 移动端稍微高一点 */
+  }
+
+  .recommendation-box {
+    /* 移动端额外确保文字不溢出 */
+    word-break: break-all;
   }
 }
 </style>
