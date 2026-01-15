@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, reactive } from 'vue'
 import { 
   NButton, NSpace, NCard, NSlider, 
-  NCheckboxGroup, NCheckbox, NGrid, NGi, useMessage,
+  NCheckboxGroup, NCheckbox, useMessage,
   NCollapse, NCollapseItem
 } from 'naive-ui'
 import { useRouter } from 'vue-router'
@@ -26,7 +26,7 @@ const userLocation = ref<{ lat: number, lng: number } | null>(null)
 const filters = reactive({
   maxDistance: 2000, // 米
   categories: Object.keys(CATEGORY_CONFIG) as FoodCategory[],
-  tiers: Object.keys(TIER_CONFIG) as TierRating[],
+  tiers: ['hang', 'top', 'ren'] as TierRating[], // 默认只选夯、顶级、人上人
   maxPrice: 200
 })
 
@@ -183,102 +183,96 @@ function handleBack() {
     </header>
 
     <main class="content-wrapper">
-      <NGrid :cols="24" :x-gap="24" :y-gap="24" responsive="screen">
-        <!-- 筛选面板 -->
-        <NGi span="24 m:8">
-          <NCard title="⚙️ 筛选偏好" :bordered="false" class="filter-card">
-            <NCollapse :default-expanded-names="['filters']" arrow-placement="right">
-              <NCollapseItem title="点击修改偏好" name="filters">
-                <template #header-extra>
-                  <span class="filter-summary">距离/价格/评分</span>
-                </template>
-                <NSpace vertical :size="16" class="filter-items-container">
-                  <div class="filter-item">
-                    <div class="filter-label">最大距离: {{ filters.maxDistance }}m</div>
-                    <NSlider v-model:value="filters.maxDistance" :min="500" :max="5000" :step="100" />
-                  </div>
+      <!-- 筛选面板 -->
+      <div class="filter-section">
+        <NCard title="⚙️ 筛选偏好" :bordered="false" class="filter-card">
+          <NCollapse arrow-placement="right">
+            <NCollapseItem title="点击修改偏好" name="filters">
+              <template #header-extra>
+                <span class="filter-summary">距离/价格/评分</span>
+              </template>
+              <NSpace vertical :size="12" class="filter-items-container">
+                <div class="filter-item">
+                  <div class="filter-label">最大距离: {{ filters.maxDistance }}m</div>
+                  <NSlider v-model:value="filters.maxDistance" :min="500" :max="5000" :step="100" />
+                </div>
 
-                  <div class="filter-item">
-                    <div class="filter-label">最高人均: ¥{{ filters.maxPrice }}</div>
-                    <NSlider v-model:value="filters.maxPrice" :min="0" :max="500" :step="10" />
-                  </div>
+                <div class="filter-item">
+                  <div class="filter-label">最高人均: ¥{{ filters.maxPrice }}</div>
+                  <NSlider v-model:value="filters.maxPrice" :min="0" :max="500" :step="10" />
+                </div>
 
-                  <div class="filter-item">
-                    <div class="filter-label">评分偏好:</div>
-                    <NCheckboxGroup v-model:value="filters.tiers">
-                      <NGrid :cols="2" :x-gap="8" :y-gap="4">
-                        <NGi v-for="(config, key) in TIER_CONFIG" :key="key">
-                          <NCheckbox :value="key" :label="config.emoji + ' ' + config.label" />
-                        </NGi>
-                      </NGrid>
-                    </NCheckboxGroup>
-                  </div>
+                <div class="filter-item">
+                  <div class="filter-label">评分偏好:</div>
+                  <NCheckboxGroup v-model:value="filters.tiers">
+                    <NSpace :size="[12, 4]" wrap>
+                      <NCheckbox v-for="(config, key) in TIER_CONFIG" :key="key" :value="key" :label="config.emoji + ' ' + config.label" />
+                    </NSpace>
+                  </NCheckboxGroup>
+                </div>
 
-                  <div class="filter-item">
-                    <div class="filter-label">菜系偏好:</div>
-                    <NCheckboxGroup v-model:value="filters.categories">
-                      <NGrid :cols="2">
-                        <NGi v-for="(config, key) in CATEGORY_CONFIG" :key="key">
-                          <NCheckbox :value="key" :label="config.emoji + ' ' + config.label" />
-                        </NGi>
-                      </NGrid>
-                    </NCheckboxGroup>
-                  </div>
-                </NSpace>
-              </NCollapseItem>
-            </NCollapse>
-            
-            <NButton 
-              type="primary" 
-              block 
-              size="large" 
-              @click="startSpin" 
-              :loading="isSpinning"
-              class="spin-button"
-            >
-              <template #icon><DiceOutline /></template>
-              开始随机挑选
-            </NButton>
-          </NCard>
-        </NGi>
+                <div class="filter-item">
+                  <div class="filter-label">菜系偏好:</div>
+                  <NCheckboxGroup v-model:value="filters.categories">
+                    <NSpace :size="[12, 4]" wrap>
+                      <NCheckbox v-for="(config, key) in CATEGORY_CONFIG" :key="key" :value="key" :label="config.emoji + ' ' + config.label" />
+                    </NSpace>
+                  </NCheckboxGroup>
+                </div>
+              </NSpace>
+            </NCollapseItem>
+          </NCollapse>
+          
+          <NButton 
+            type="primary" 
+            block 
+            size="large" 
+            @click="startSpin" 
+            :loading="isSpinning"
+            class="spin-button"
+          >
+            <template #icon><DiceOutline /></template>
+            开始随机挑选
+          </NButton>
+        </NCard>
+      </div>
 
-        <!-- 展示面板 -->
-        <NGi span="24 m:16">
-          <div class="display-container">
-            <!-- 初始状态 -->
-            <div v-if="!isSpinning && !resultRestaurant" class="placeholder-state">
-              <div class="dice-animation">🎲</div>
-              <h2>点击按钮，帮您做决定！</h2>
-              <p>我们将从符合条件的 {{ filteredPool.length }} 家餐厅中随机挑选</p>
-            </div>
+      <!-- 展示面板 -->
+      <div class="display-section">
+        <div class="display-container">
+          <!-- 初始状态 -->
+          <div v-if="!isSpinning && !resultRestaurant" class="placeholder-state">
+            <div class="dice-animation">🎲</div>
+            <h2>点击按钮，帮您做决定！</h2>
+            <p>我们将从符合条件的 {{ filteredPool.length }} 家餐厅中随机挑选</p>
+          </div>
 
-            <!-- 动画状态 (老虎机) -->
-            <div v-if="isSpinning" class="slot-machine">
-              <div class="slot-track">
-                <div v-for="i in 10" :key="i" class="slot-item">
-                  <div class="mock-card">
-                    <span class="mock-emoji">🍜</span>
-                    <span class="mock-text">挑选搜索中...</span>
-                  </div>
+          <!-- 动画状态 (老虎机) -->
+          <div v-if="isSpinning" class="slot-machine">
+            <div class="slot-track">
+              <div v-for="i in 10" :key="i" class="slot-item">
+                <div class="mock-card">
+                  <span class="mock-emoji">🍜</span>
+                  <span class="mock-text">挑选中...</span>
                 </div>
               </div>
-              <div class="slot-overlay"></div>
             </div>
-
-            <!-- 结果状态 -->
-            <div v-if="resultRestaurant" class="result-state">
-              <div class="congrats-text">就是它了！🎉</div>
-              <div class="result-card-wrapper">
-                <RestaurantCard :restaurant="resultRestaurant" :user-location="userLocation" />
-              </div>
-              <NButton quaternary @click="startSpin" class="retry-btn">
-                <template #icon><RefreshOutline /></template>
-                不满意？再抽一次
-              </NButton>
-            </div>
+            <div class="slot-overlay"></div>
           </div>
-        </NGi>
-      </NGrid>
+
+          <!-- 结果状态 -->
+          <div v-if="resultRestaurant" class="result-state">
+            <div class="congrats-text">就是它了！🎉</div>
+            <div class="result-card-wrapper">
+              <RestaurantCard :restaurant="resultRestaurant" :user-location="userLocation" />
+            </div>
+            <NButton quaternary @click="startSpin" class="retry-btn">
+              <template #icon><RefreshOutline /></template>
+              不满意？再抽一次
+            </NButton>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -286,109 +280,119 @@ function handleBack() {
 <style scoped>
 .random-pick-page {
   min-height: 100vh;
+  height: 100vh;
   background-color: var(--bg-primary);
-  padding: 20px;
-  max-width: 100vw;
-  overflow-x: hidden;
+  padding: 12px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .page-header {
-  max-width: 1200px;
-  margin: 0 auto 24px;
+  flex-shrink: 0;
+  margin-bottom: 12px;
 }
 
 .page-title {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .content-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
-  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 12px;
+}
+
+.filter-section {
+  flex-shrink: 0;
 }
 
 .filter-card {
   background-color: var(--bg-secondary);
-  border-radius: 16px;
-  max-width: 100%;
-  overflow: hidden;
+  border-radius: 12px;
 }
 
 .filter-item {
   width: 100%;
-  min-width: 0;
-}
-
-/* Ensure Naive UI grids don't overflow */
-.filter-card :deep(.n-grid) {
-  max-width: 100%;
-}
-
-.filter-card :deep(.n-checkbox) {
-  max-width: 100%;
-}
-
-.filter-card :deep(.n-checkbox__label) {
-  white-space: normal;
-  word-break: keep-all;
 }
 
 .filter-label {
-  font-size: 14px;
-  margin-bottom: 8px;
+  font-size: 13px;
+  margin-bottom: 6px;
   color: var(--text-secondary);
 }
 
+.filter-items-container {
+  padding: 4px 0;
+}
+
 .spin-button {
-  height: 56px;
-  font-size: 18px;
+  height: 44px;
+  font-size: 16px;
   font-weight: 700;
-  border-radius: 12px;
-  margin-top: 20px;
+  border-radius: 10px;
+  margin-top: 12px;
   background: linear-gradient(135deg, #18a058 0%, #0c7a43 100%);
   box-shadow: 0 4px 12px rgba(24, 160, 88, 0.3);
 }
 
 .filter-summary {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-tertiary);
   opacity: 0.6;
 }
 
-.filter-items-container {
-  padding: 8px 0;
+.display-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
 .display-container {
-  height: 500px;
+  flex: 1;
   background-color: rgba(255, 255, 255, 0.02);
   border: 2px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
+  min-height: 200px;
+  max-height: 400px;
 }
 
 .placeholder-state {
   text-align: center;
   color: var(--text-secondary);
+  padding: 16px;
+}
+
+.placeholder-state h2 {
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+.placeholder-state p {
+  font-size: 13px;
+  margin: 0;
+  opacity: 0.8;
 }
 
 .dice-animation {
-  font-size: 80px;
-  animation: rotate 2s infinite linear;
-  margin-bottom: 20px;
+  font-size: 60px;
+  animation: float 2s ease-in-out infinite;
 }
 
-@keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 /* 老虎机动画效果 */
@@ -408,26 +412,26 @@ function handleBack() {
 
 @keyframes slot-scroll {
   0% { transform: translateY(0); }
-  100% { transform: translateY(-300px); }
+  100% { transform: translateY(-200px); }
 }
 
 .slot-item {
-  height: 150px;
+  height: 100px;
   width: 100%;
-  max-width: 400px;
-  padding: 10px;
+  max-width: 280px;
+  padding: 8px;
 }
 
 .mock-card {
   height: 100%;
   width: 100%;
   background-color: var(--bg-secondary);
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   filter: blur(2px);
 }
 
@@ -440,8 +444,8 @@ function handleBack() {
   background: linear-gradient(
     to bottom,
     var(--bg-primary) 0%,
-    transparent 20%,
-    transparent 80%,
+    transparent 25%,
+    transparent 75%,
     var(--bg-primary) 100%
   );
   pointer-events: none;
@@ -452,6 +456,8 @@ function handleBack() {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 12px;
+  width: 100%;
   animation: scale-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -461,83 +467,67 @@ function handleBack() {
 }
 
 .congrats-text {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   color: #18a058;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   text-shadow: 0 0 20px rgba(24, 160, 88, 0.4);
 }
 
 .result-card-wrapper {
-  transform: scale(1.1);
-  margin-bottom: 40px;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  justify-content: center;
 }
 
 .retry-btn {
-  margin-top: 20px;
+  margin-top: 12px;
 }
 
-@media (max-width: 768px) {
+/* Desktop styles */
+@media (min-width: 769px) {
   .random-pick-page {
-    padding: 12px;
-    padding-right: 12px;
-    width: 100%;
-    max-width: 100vw;
+    padding: 20px;
+    height: auto;
+    min-height: 100vh;
   }
-  .page-header {
-    margin-bottom: 12px;
-  }
+  
   .content-wrapper {
-    width: 100%;
-    max-width: 100%;
+    flex-direction: row;
+    max-width: 1200px;
+    margin: 0 auto;
   }
-  .filter-card {
-    width: 100%;
-    max-width: 100%;
+  
+  .filter-section {
+    width: 320px;
+    flex-shrink: 0;
   }
-  .filter-items-container {
-    width: 100%;
-    max-width: 100%;
+  
+  .display-section {
+    flex: 1;
   }
-  .filter-item {
-    width: 100%;
-    max-width: 100%;
-  }
-  /* Force checkbox grids to use flexible layout on mobile */
-  .filter-card :deep(.n-grid) {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  .filter-card :deep(.n-gi) {
-    min-width: 0;
-  }
+  
   .display-container {
-    height: 380px;
-    margin-top: 12px;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 100%;
+    height: 500px;
+    max-height: none;
   }
-  .result-card-wrapper {
-    transform: scale(0.95);
-    width: 100%;
-    max-width: 100%;
-    display: flex;
-    justify-content: center;
-    padding: 0 8px;
-    box-sizing: border-box;
+  
+  .page-title {
+    font-size: 24px;
   }
-  .placeholder-state {
-    padding: 0 16px;
-    word-break: break-word;
-  }
-  .placeholder-state p {
-    font-size: 14px;
-  }
+  
   .spin-button {
-    height: 48px;
-    font-size: 16px;
-    margin-top: 12px;
+    height: 56px;
+    font-size: 18px;
+  }
+  
+  .dice-animation {
+    font-size: 80px;
+  }
+  
+  .placeholder-state h2 {
+    font-size: 22px;
   }
 }
 </style>
