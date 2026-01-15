@@ -8,9 +8,11 @@ import NavigateButton from '@/components/common/NavigateButton.vue'
 import EditRestaurantModal from '@/components/admin/EditRestaurantModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { ref } from 'vue'
+import { getDistance, estimateWalkTime } from '@/utils/geo'
 
 const props = defineProps<{
   restaurant: Restaurant
+  userLocation?: { lat: number, lng: number } | null
 }>()
 
 const emit = defineEmits(['update'])
@@ -23,6 +25,21 @@ const canEdit = computed(() => {
 
 const tierConfig = TIER_CONFIG[props.restaurant.tier]
 const categoryConfig = CATEGORY_CONFIG[props.restaurant.category]
+
+const distanceInfo = computed(() => {
+  if (!props.userLocation || !props.restaurant.latitude || !props.restaurant.longitude) return null
+  const dist = getDistance(
+    props.userLocation.lat,
+    props.userLocation.lng,
+    props.restaurant.latitude,
+    props.restaurant.longitude
+  )
+  return {
+    meters: Math.round(dist),
+    text: dist > 1000 ? `${(dist / 1000).toFixed(1)}km` : `${Math.round(dist)}m`,
+    walkTime: estimateWalkTime(dist)
+  }
+})
 
 const placeholderStyle = computed(() => ({
   background: `linear-gradient(135deg, ${tierConfig.color}1a 0%, ${tierConfig.color}33 100%)`,
@@ -74,6 +91,13 @@ const placeholderStyle = computed(() => ({
           <span class="info-item price">
             ¥{{ restaurant.price_per_person }}/人
           </span>
+          <template v-if="distanceInfo">
+            <span class="separator">•</span>
+            <span class="info-item distance" :title="'步行约 ' + distanceInfo.walkTime + ' 分钟'">
+              <span class="info-icon">🚶</span>
+              {{ distanceInfo.text }}
+            </span>
+          </template>
         </div>
         
         <div class="info-row location">
@@ -225,6 +249,11 @@ const placeholderStyle = computed(() => ({
   font-variant-numeric: tabular-nums;
 }
 
+.distance {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
 .address-text {
   flex: 1;
   overflow: hidden;
@@ -273,13 +302,15 @@ const placeholderStyle = computed(() => ({
 /* 移动端适配 */
 @media (max-width: 768px) {
   .restaurant-card {
-    width: 100%; /* Single column full width */
+    width: 100%;
+    max-width: 340px; /* 限制最大宽度，防止拉伸过长 */
+    margin: 0 auto; /* 居中显示 */
     height: auto;
   }
   
   .card-image,
   .card-image-placeholder {
-    height: 160px; /* Slightly taller on mobile for impact */
+    height: 180px; /* 移动端稍微高一点 */
   }
 }
 </style>

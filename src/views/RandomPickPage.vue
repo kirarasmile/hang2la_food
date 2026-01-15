@@ -7,10 +7,12 @@ import {
 import { useRouter } from 'vue-router'
 import { ArrowBackOutline, DiceOutline, RefreshOutline } from '@vicons/ionicons5'
 import { supabase } from '@/api/supabase'
-import { CATEGORY_CONFIG } from '@/types'
-import type { Restaurant, FoodCategory } from '@/types'
+import { CATEGORY_CONFIG, TIER_CONFIG } from '@/types'
+import type { Restaurant, FoodCategory, TierRating } from '@/types'
 import { getDistance, estimateWalkTime } from '@/utils/geo'
 import RestaurantCard from '@/components/tier/RestaurantCard.vue'
+import AMapLoader from '@amap/amap-jsapi-loader'
+
 
 const router = useRouter()
 const message = useMessage()
@@ -22,8 +24,9 @@ const userLocation = ref<{ lat: number, lng: number } | null>(null)
 // 筛选状态
 const filters = reactive({
   maxDistance: 2000, // 米
-  maxWalkTime: 20, // 分钟
-  categories: Object.keys(CATEGORY_CONFIG) as FoodCategory[]
+  categories: Object.keys(CATEGORY_CONFIG) as FoodCategory[],
+  tiers: Object.keys(TIER_CONFIG) as TierRating[],
+  maxPrice: 200
 })
 
 // 老虎机状态
@@ -53,6 +56,44 @@ async function fetchAll() {
 }
 
 async function getCurrentLocation() {
+  try {
+    const key = import.meta.env.VITE_AMAP_KEY
+    const securityJsCode = import.meta.env.VITE_AMAP_SECRET
+    
+    if (securityJsCode && !(window as any)._AMapSecurityConfig) {
+      (window as any)._AMapSecurityConfig = { securityJsCode }
+    }
+
+    const AMap = await AMapLoader.load({
+      key,
+      version: '2.0',
+      plugins: ['AMap.Geolocation']
+    })
+
+    const geolocation = new AMap.Geolocation({
+      enableHighAccuracy: true,
+      timeout: 10000,
+    })
+
+    geolocation.getCurrentPosition((status: string, result: any) => {
+      if (status === 'complete') {
+        userLocation.value = {
+          lat: result.position.lat,
+          lng: result.position.lng
+        }
+        console.log('[RandomPick] AMap location success:', userLocation.value)
+      } else {
+        console.warn('[RandomPick] AMap location failed, falling back to browser:', result)
+        fallbackToBrowserLocation()
+      }
+    })
+  } catch (error) {
+    console.error('[RandomPick] AMap load failed:', error)
+    fallbackToBrowserLocation()
+  }
+}
+
+function fallbackToBrowserLocation() {
   if (!navigator.geolocation) {
     message.warning('浏览器不支持获取位置')
     return
@@ -64,6 +105,7 @@ async function getCurrentLocation() {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude
       }
+      message.info('已使用浏览器定位 (可能存在偏差)')
     },
     (err) => {
       console.error('Geolocation error:', err)
@@ -78,11 +120,17 @@ const filteredPool = computed(() => {
     // 菜系筛选
     if (!filters.categories.includes(res.category)) return false
     
-    // 距离/时间筛选 (如果有定位)
+    // 评分筛选
+    if (!filters.tiers.includes(res.tier)) return false
+
+    // 价格筛选
+    if (res.price_per_person > filters.maxPrice) return false
+
+    // 距离筛选 (如果有定位)
     if (userLocation.value && res.latitude && res.longitude) {
       const dist = getDistance(userLocation.value.lat, userLocation.value.lng, res.latitude, res.longitude)
-      const walkTime = estimateWalkTime(dist)
-      if (dist > filters.maxDistance && walkTime > filters.maxWalkTime) return false
+      // 只要距离超过最大距离就过滤掉
+      if (dist > filters.maxDistance) return false
     }
     
     return true
@@ -134,19 +182,30 @@ function handleBack() {
     </header>
 
     <main class="content-wrapper">
-      <NGrid :cols="24" :x-gap="24" responsive="screen">
+      <NGrid :cols="24" :x-gap="24" :y-gap="24" responsive="screen">
         <!-- 筛选面板 -->
-        <NGi :span="24" :mspan="8">
+        <NGi span="24 m:8">
           <NCard title="⚙️ 筛选偏好" :bordered="false" class="filter-card">
             <NSpace vertical :size="20">
               <div class="filter-item">
                 <div class="filter-label">最大距离: {{ filters.maxDistance }}m</div>
                 <NSlider v-model:value="filters.maxDistance" :min="500" :max="5000" :step="100" />
               </div>
-              
+
               <div class="filter-item">
-                <div class="filter-label">最大步行时间: {{ filters.maxWalkTime }}min</div>
-                <NSlider v-model:value="filters.maxWalkTime" :min="5" :max="60" :step="5" />
+                <div class="filter-label">最高人均: ¥{{ filters.maxPrice }}</div>
+                <NSlider v-model:value="filters.maxPrice" :min="0" :max="500" :step="10" />
+              </div>
+
+              <div class="filter-item">
+                <div class="filter-label">评分偏好:</div>
+                <NCheckboxGroup v-model:value="filters.tiers">
+                  <NGrid :cols="3">
+                    <NGi v-for="(config, key) in TIER_CONFIG" :key="key">
+                      <NCheckbox :value="key" :label="config.emoji + ' ' + config.label" />
+                    </NGi>
+                  </NGrid>
+                </NCheckboxGroup>
               </div>
 
               <div class="filter-item">
@@ -177,7 +236,7 @@ function handleBack() {
         </NGi>
 
         <!-- 展示面板 -->
-        <NGi :span="24" :mspan="16">
+        <NGi span="24 m:16">
           <div class="display-container">
             <!-- 初始状态 -->
             <div v-if="!isSpinning && !resultRestaurant" class="placeholder-state">
@@ -203,7 +262,7 @@ function handleBack() {
             <div v-if="resultRestaurant" class="result-state">
               <div class="congrats-text">就是它了！🎉</div>
               <div class="result-card-wrapper">
-                <RestaurantCard :restaurant="resultRestaurant" />
+                <RestaurantCard :restaurant="resultRestaurant" :user-location="userLocation" />
               </div>
               <NButton quaternary @click="startSpin" class="retry-btn">
                 <template #icon><RefreshOutline /></template>
@@ -312,12 +371,14 @@ function handleBack() {
 
 .slot-item {
   height: 150px;
-  width: 300px;
+  width: 100%;
+  max-width: 400px;
   padding: 10px;
 }
 
 .mock-card {
   height: 100%;
+  width: 100%;
   background-color: var(--bg-secondary);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);

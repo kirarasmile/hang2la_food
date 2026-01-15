@@ -66,9 +66,13 @@ defineProps<{
   }
   
   .card-list {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    width: 100%;
+    min-width: 100%;
     gap: 12px;
-    padding-bottom: 16px;
+    padding: 12px;
+    justify-items: center;
   }
 }
 </style>
