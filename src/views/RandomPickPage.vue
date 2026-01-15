@@ -288,6 +288,9 @@ function handleBack() {
   min-height: 100vh;
   background-color: var(--bg-primary);
   padding: 20px;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -305,11 +308,35 @@ function handleBack() {
 .content-wrapper {
   max-width: 1200px;
   margin: 0 auto;
+  overflow: hidden;
 }
 
 .filter-card {
   background-color: var(--bg-secondary);
   border-radius: 16px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.filter-item {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Ensure Naive UI grids don't overflow */
+.filter-card :deep(.n-grid) {
+  max-width: 100%;
+}
+
+.filter-card :deep(.n-checkbox) {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.filter-card :deep(.n-checkbox__label) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-label {
@@ -455,20 +482,59 @@ function handleBack() {
 @media (max-width: 768px) {
   .random-pick-page {
     padding: 12px;
+    padding-right: 12px;
+    width: 100%;
+    max-width: 100vw;
   }
   .page-header {
     margin-bottom: 12px;
+  }
+  .content-wrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+  .filter-card {
+    width: 100%;
+    max-width: 100%;
+  }
+  .filter-items-container {
+    width: 100%;
+    max-width: 100%;
+  }
+  .filter-item {
+    width: 100%;
+    max-width: 100%;
+  }
+  /* Force checkbox grids to use flexible layout on mobile */
+  .filter-card :deep(.n-grid) {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .filter-card :deep(.n-gi) {
+    min-width: 0;
   }
   .display-container {
     height: 380px;
     margin-top: 12px;
     border-radius: 16px;
+    width: 100%;
+    max-width: 100%;
   }
   .result-card-wrapper {
     transform: scale(0.95);
     width: 100%;
+    max-width: 100%;
     display: flex;
     justify-content: center;
+    padding: 0 8px;
+    box-sizing: border-box;
+  }
+  .placeholder-state {
+    padding: 0 16px;
+    word-break: break-word;
+  }
+  .placeholder-state p {
+    font-size: 14px;
   }
   .spin-button {
     height: 48px;
