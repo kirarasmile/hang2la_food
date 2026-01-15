@@ -3,12 +3,13 @@ import { getFingerprint } from '@/utils/fingerprint'
 
 /**
  * 提交或更新投票
+ * 如果点击已有的投票类型，则取消投票
  */
 export async function toggleVote(restaurantId: string, voteType: 1 | -1, userId?: string) {
   const fingerprint = !userId ? getFingerprint() : null
 
   try {
-    // 检查是否已有投票
+    // 1. 检查是否已有投票
     let query = supabase
       .from('restaurant_votes')
       .select('id, vote_type')
@@ -27,9 +28,7 @@ export async function toggleVote(restaurantId: string, voteType: 1 | -1, userId?
     if (existingVotes && existingVotes.length > 0) {
       const existingVote = existingVotes[0]
       
-      // 如果点击的是相同的投票类型，则取消投票（这里根据需求决定是取消还是保持）
-      // 用户要求是“可以改变投票”，没说可以取消，但通常点一下已选的会取消。
-      // 为了简单，我们实现：如果点击已选的 -> 删除记录；如果点击不同的 -> 更新类型。
+      // 如果点击的是相同的投票类型 -> 取消投票 (删除记录)
       if (existingVote.vote_type === voteType) {
         const { error: deleteError } = await supabase
           .from('restaurant_votes')
@@ -39,6 +38,7 @@ export async function toggleVote(restaurantId: string, voteType: 1 | -1, userId?
         if (deleteError) throw deleteError
         return { action: 'deleted' }
       } else {
+        // 如果点击的是不同类型 -> 切换投票 (更新记录)
         const { error: updateError } = await supabase
           .from('restaurant_votes')
           .update({ vote_type: voteType })
@@ -48,7 +48,7 @@ export async function toggleVote(restaurantId: string, voteType: 1 | -1, userId?
         return { action: 'updated' }
       }
     } else {
-      // 创建新投票
+      // 2. 创建新投票
       const { error: insertError } = await supabase
         .from('restaurant_votes')
         .insert({
@@ -107,11 +107,9 @@ export async function getUserVote(restaurantId: string, userId?: string) {
       query = query.eq('fingerprint', fingerprint)
     }
 
-    const { data, error } = await query.single()
+    const { data, error } = await query.maybeSingle()
     
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      throw error
-    }
+    if (error) throw error
 
     return data ? data.vote_type : null
   } catch (error: any) {

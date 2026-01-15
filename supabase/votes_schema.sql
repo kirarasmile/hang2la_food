@@ -38,6 +38,13 @@ FOR UPDATE USING (
   (auth.uid() IS NULL AND fingerprint IS NOT NULL)
 );
 
+-- 所有人可删除自己的投票 (新增)
+CREATE POLICY "Public delete own votes" ON restaurant_votes
+FOR DELETE USING (
+  (auth.uid() IS NOT NULL AND auth.uid() = user_id) OR
+  (auth.uid() IS NULL AND fingerprint IS NOT NULL)
+);
+
 -- 自动更新 updated_at
 CREATE TRIGGER update_votes_modtime
 BEFORE UPDATE ON restaurant_votes
@@ -53,7 +60,7 @@ SELECT
 FROM restaurant_votes
 GROUP BY restaurant_id;
 
--- RPC 获取包含投票信息的餐厅列表
+-- RPC 获取包含投票信息的餐厅列表 (修正版：明确字段列表，避免 r.* 顺序问题)
 CREATE OR REPLACE FUNCTION get_restaurants_with_votes(user_uuid UUID DEFAULT NULL)
 RETURNS TABLE (
   id UUID,
@@ -79,13 +86,25 @@ RETURNS TABLE (
 BEGIN
   RETURN QUERY
   SELECT 
-    r.*,
-    COALESCE(s.upvotes, 0) as upvotes,
-    COALESCE(s.downvotes, 0) as downvotes,
-    (SELECT vote_type FROM restaurant_votes v 
-     WHERE v.restaurant_id = r.id AND v.user_id = user_uuid) as user_vote
+    r.id, r.name, r.tier, r.category, r.price_per_person, 
+    r.address, r.city, r.district, r.latitude, r.longitude, 
+    r.recommendation, r.image_url, r.created_by, r.created_at, 
+    r.updated_at, r.is_deleted,
+    COALESCE(s.upvotes, 0)::BIGINT as upvotes,
+    COALESCE(s.downvotes, 0)::BIGINT as downvotes,
+    (SELECT v.vote_type FROM restaurant_votes v 
+     WHERE v.restaurant_id = r.id AND (
+       (user_uuid IS NOT NULL AND v.user_id = user_uuid)
+     ) LIMIT 1) as user_vote
   FROM restaurants r
-  LEFT JOIN restaurant_stats s ON r.id = s.restaurant_id
+  LEFT JOIN (
+    SELECT 
+      restaurant_id,
+      COUNT(*) FILTER (WHERE vote_type = 1) as upvotes,
+      COUNT(*) FILTER (WHERE vote_type = -1) as downvotes
+    FROM restaurant_votes
+    GROUP BY restaurant_id
+  ) s ON r.id = s.restaurant_id
   WHERE r.is_deleted = FALSE
   ORDER BY r.created_at DESC;
 END;
