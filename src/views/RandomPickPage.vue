@@ -9,7 +9,7 @@ import { ArrowBackOutline, DiceOutline, RefreshOutline } from '@vicons/ionicons5
 import { supabase } from '@/api/supabase'
 import { CATEGORY_CONFIG, TIER_CONFIG } from '@/types'
 import type { Restaurant, FoodCategory, TierRating } from '@/types'
-import { getDistance, estimateWalkTime } from '@/utils/geo'
+import { getDistance } from '@/utils/geo'
 import RestaurantCard from '@/components/tier/RestaurantCard.vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 
