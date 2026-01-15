@@ -279,24 +279,30 @@ function handleBack() {
 
 <style scoped>
 .random-pick-page {
-  min-height: 100vh;
+  /* 使用 dvh 动态视口高度，更好适配移动端 */
   height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   background-color: var(--bg-primary);
   padding: 12px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* 确保不会超出屏幕宽度 */
+  max-width: 100vw;
+  width: 100%;
 }
 
 .page-header {
   flex-shrink: 0;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .page-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -306,16 +312,30 @@ function handleBack() {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
+  gap: 8px;
+  /* 防止内容溢出 */
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 
 .filter-section {
   flex-shrink: 0;
+  /* 确保不会超出容器 */
+  width: 100%;
+  max-width: 100%;
 }
 
 .filter-card {
   background-color: var(--bg-secondary);
   border-radius: 12px;
+  /* 确保卡片不会溢出 */
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.filter-card :deep(.n-card__content) {
+  padding: 12px;
 }
 
 .filter-item {
@@ -323,8 +343,8 @@ function handleBack() {
 }
 
 .filter-label {
-  font-size: 13px;
-  margin-bottom: 6px;
+  font-size: 12px;
+  margin-bottom: 4px;
   color: var(--text-secondary);
 }
 
@@ -334,12 +354,13 @@ function handleBack() {
 
 .spin-button {
   height: 44px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   border-radius: 10px;
-  margin-top: 12px;
+  margin-top: 8px;
   background: linear-gradient(135deg, #18a058 0%, #0c7a43 100%);
   box-shadow: 0 4px 12px rgba(24, 160, 88, 0.3);
+  width: 100%;
 }
 
 .filter-summary {
@@ -352,47 +373,54 @@ function handleBack() {
   flex: 1;
   min-height: 0;
   display: flex;
+  /* 确保不会溢出 */
+  overflow: hidden;
+  width: 100%;
 }
 
 .display-container {
   flex: 1;
+  width: 100%;
   background-color: rgba(255, 255, 255, 0.02);
   border: 2px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
-  min-height: 200px;
-  max-height: 400px;
+  /* 动态高度，最小 150px */
+  min-height: 150px;
 }
 
 .placeholder-state {
   text-align: center;
   color: var(--text-secondary);
-  padding: 16px;
+  padding: 12px;
+  /* 确保内容不会溢出 */
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .placeholder-state h2 {
-  font-size: 18px;
-  margin: 8px 0;
+  font-size: 16px;
+  margin: 6px 0;
 }
 
 .placeholder-state p {
-  font-size: 13px;
+  font-size: 12px;
   margin: 0;
   opacity: 0.8;
 }
 
 .dice-animation {
-  font-size: 60px;
+  font-size: 48px;
   animation: float 2s ease-in-out infinite;
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-8px); }
 }
 
 /* 老虎机动画效果 */
@@ -416,10 +444,11 @@ function handleBack() {
 }
 
 .slot-item {
-  height: 100px;
+  height: 80px;
   width: 100%;
-  max-width: 280px;
-  padding: 8px;
+  max-width: 260px;
+  padding: 6px;
+  box-sizing: border-box;
 }
 
 .mock-card {
@@ -456,8 +485,10 @@ function handleBack() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px;
+  padding: 8px;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   animation: scale-up 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -467,54 +498,66 @@ function handleBack() {
 }
 
 .congrats-text {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   color: #18a058;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   text-shadow: 0 0 20px rgba(24, 160, 88, 0.4);
 }
 
 .result-card-wrapper {
   width: 100%;
-  max-width: 320px;
+  max-width: 300px;
   display: flex;
   justify-content: center;
 }
 
 .retry-btn {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 /* Desktop styles */
 @media (min-width: 769px) {
   .random-pick-page {
-    padding: 20px;
+    padding: 24px;
     height: auto;
     min-height: 100vh;
+    max-height: none;
+  }
+  
+  .page-header {
+    margin-bottom: 16px;
   }
   
   .content-wrapper {
     flex-direction: row;
-    max-width: 1200px;
+    max-width: 1000px;
     margin: 0 auto;
+    gap: 24px;
+    overflow: visible;
   }
   
   .filter-section {
-    width: 320px;
+    width: 380px;
     flex-shrink: 0;
+  }
+  
+  .filter-card :deep(.n-card__content) {
+    padding: 16px;
   }
   
   .display-section {
     flex: 1;
+    overflow: visible;
   }
   
   .display-container {
-    height: 500px;
-    max-height: none;
+    min-height: 400px;
+    border-radius: 16px;
   }
   
   .page-title {
-    font-size: 24px;
+    font-size: 28px;
   }
   
   .spin-button {
@@ -528,6 +571,22 @@ function handleBack() {
   
   .placeholder-state h2 {
     font-size: 22px;
+  }
+  
+  .placeholder-state p {
+    font-size: 14px;
+  }
+  
+  .filter-label {
+    font-size: 14px;
+  }
+  
+  .congrats-text {
+    font-size: 24px;
+  }
+  
+  .result-card-wrapper {
+    max-width: 360px;
   }
 }
 </style>
