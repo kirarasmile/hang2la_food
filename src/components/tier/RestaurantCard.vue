@@ -98,10 +98,10 @@ const placeholderStyle = computed(() => ({
           </NSpace>
         </div>
         
-        <div class="recommendation-box" v-if="restaurant.recommendation">
+        <div class="recommendation-box">
           <span class="quote-icon">❝</span>
-          <NEllipsis :line-clamp="2" :tooltip="false">
-            {{ restaurant.recommendation }}
+          <NEllipsis :line-clamp="2" :tooltip="{}">
+            {{ restaurant.recommendation || '暂无评价' }}
           </NEllipsis>
         </div>
       </NSpace>
@@ -247,6 +247,18 @@ const placeholderStyle = computed(() => ({
   line-height: 1.5;
   position: relative;
   font-style: italic;
+  min-height: 46px; /* 确保高度一致，约两行文字的高度 */
+  display: flex;
+  align-items: center;
+}
+
+.recommendation-box :deep(.n-ellipsis) {
+  width: 100%;
+}
+
+.recommendation-box:not(:has(.quote-icon)) {
+  /* 当没有评价内容时稍微降低透明度 */
+  opacity: 0.6;
 }
 
 .quote-icon {

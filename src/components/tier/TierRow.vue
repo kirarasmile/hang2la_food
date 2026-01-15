@@ -54,6 +54,8 @@ defineProps<{
   padding: 16px;
   min-height: 100%; /* 撑满高度 */
   align-items: center; /* 垂直居中卡片 */
+  width: max-content; /* 确保不被压缩 */
+  min-width: 100%;
 }
 
 /* 移动端适配 */

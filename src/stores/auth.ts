@@ -119,7 +119,11 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: true, message: '登录成功！' }
     } catch (error: any) {
       console.error('Sign in error:', error)
-      return { success: false, message: error.message || '登录失败' }
+      let message = error.message || '登录失败'
+      if (message === 'Email not confirmed') {
+        message = '邮箱尚未确认，请点击邮件中的链接完成验证。如果没有收到邮件，请检查垃圾箱，或联系管理员关闭邮箱验证功能。'
+      }
+      return { success: false, message }
     } finally {
       loading.value = false
     }

@@ -102,12 +102,12 @@ async function handleRegister() {
         }
       }
 
-      message.success('注册成功！请登录')
+      message.success('注册成功！请查看邮箱确认后再登录')
       
       // 延迟跳转到登录页
       setTimeout(() => {
         router.push('/login')
-      }, 2000)
+      }, 3000)
     } else {
       message.error(result.message)
     }
