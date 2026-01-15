@@ -206,7 +206,7 @@ function handleBack() {
                   <div class="filter-item">
                     <div class="filter-label">评分偏好:</div>
                     <NCheckboxGroup v-model:value="filters.tiers">
-                      <NGrid :cols="3">
+                      <NGrid :cols="2" :x-gap="8" :y-gap="4">
                         <NGi v-for="(config, key) in TIER_CONFIG" :key="key">
                           <NCheckbox :value="key" :label="config.emoji + ' ' + config.label" />
                         </NGi>
@@ -330,13 +330,11 @@ function handleBack() {
 
 .filter-card :deep(.n-checkbox) {
   max-width: 100%;
-  overflow: hidden;
 }
 
 .filter-card :deep(.n-checkbox__label) {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: keep-all;
 }
 
 .filter-label {
