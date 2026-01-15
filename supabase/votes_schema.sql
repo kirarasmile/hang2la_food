@@ -1,66 +1,45 @@
--- 11. 餐厅投票表
-CREATE TABLE restaurant_votes (
+-- 1. 创建投票表 (如果不存在)
+CREATE TABLE IF NOT EXISTS restaurant_votes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE NOT NULL,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE, -- 可为空（游客投票）
-  vote_type INTEGER NOT NULL CHECK (vote_type IN (1, -1)), -- 1 为赞，-1 为踩
-  fingerprint TEXT, -- 游客指纹 (localStorage)
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  vote_type INTEGER NOT NULL CHECK (vote_type IN (1, -1)),
+  fingerprint TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 唯一性约束：登录用户每个餐厅只能投一票
+-- 2. 唯一性约束
+DROP INDEX IF EXISTS idx_votes_user_restaurant;
 CREATE UNIQUE INDEX idx_votes_user_restaurant ON restaurant_votes(restaurant_id, user_id) WHERE user_id IS NOT NULL;
--- 唯一性约束：游客通过指纹每个餐厅只能投一票
+
+DROP INDEX IF EXISTS idx_votes_fingerprint_restaurant;
 CREATE UNIQUE INDEX idx_votes_fingerprint_restaurant ON restaurant_votes(restaurant_id, fingerprint) WHERE user_id IS NULL;
 
--- 索引
-CREATE INDEX idx_votes_restaurant_id ON restaurant_votes(restaurant_id);
-
--- RLS 策略
+-- 3. RLS 策略配置
 ALTER TABLE restaurant_votes ENABLE ROW LEVEL SECURITY;
 
--- 所有人可读投票数据
-CREATE POLICY "Public read votes" ON restaurant_votes
-FOR SELECT USING (TRUE);
+-- 删除旧策略以防冲突
+DROP POLICY IF EXISTS "Public read votes" ON restaurant_votes;
+DROP POLICY IF EXISTS "Public insert votes" ON restaurant_votes;
+DROP POLICY IF EXISTS "Public update own votes" ON restaurant_votes;
+DROP POLICY IF EXISTS "Public delete own votes" ON restaurant_votes;
 
--- 所有人可插入投票（登录用户或游客）
-CREATE POLICY "Public insert votes" ON restaurant_votes
-FOR INSERT WITH CHECK (
+CREATE POLICY "Public read votes" ON restaurant_votes FOR SELECT USING (TRUE);
+CREATE POLICY "Public insert votes" ON restaurant_votes FOR INSERT WITH CHECK (
+  (auth.uid() IS NOT NULL AND auth.uid() = user_id) OR
+  (auth.uid() IS NULL AND fingerprint IS NOT NULL)
+);
+CREATE POLICY "Public update own votes" ON restaurant_votes FOR UPDATE USING (
+  (auth.uid() IS NOT NULL AND auth.uid() = user_id) OR
+  (auth.uid() IS NULL AND fingerprint IS NOT NULL)
+);
+CREATE POLICY "Public delete own votes" ON restaurant_votes FOR DELETE USING (
   (auth.uid() IS NOT NULL AND auth.uid() = user_id) OR
   (auth.uid() IS NULL AND fingerprint IS NOT NULL)
 );
 
--- 所有人可更新自己的投票
-CREATE POLICY "Public update own votes" ON restaurant_votes
-FOR UPDATE USING (
-  (auth.uid() IS NOT NULL AND auth.uid() = user_id) OR
-  (auth.uid() IS NULL AND fingerprint IS NOT NULL)
-);
-
--- 所有人可删除自己的投票 (新增)
-CREATE POLICY "Public delete own votes" ON restaurant_votes
-FOR DELETE USING (
-  (auth.uid() IS NOT NULL AND auth.uid() = user_id) OR
-  (auth.uid() IS NULL AND fingerprint IS NOT NULL)
-);
-
--- 自动更新 updated_at
-CREATE TRIGGER update_votes_modtime
-BEFORE UPDATE ON restaurant_votes
-FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-
--- 为了方便查询，给 restaurants 表增加聚合字段（可选，或者使用视图）
--- 这里我们先用视图或实时计算，如果性能有问题再加触发器同步到 restaurants 表
-CREATE OR REPLACE VIEW restaurant_stats AS
-SELECT 
-  restaurant_id,
-  COUNT(*) FILTER (WHERE vote_type = 1) as upvotes,
-  COUNT(*) FILTER (WHERE vote_type = -1) as downvotes
-FROM restaurant_votes
-GROUP BY restaurant_id;
-
--- RPC 获取包含投票信息的餐厅列表 (修正版：明确字段列表，避免 r.* 顺序问题)
+-- 4. 修复首页 RPC 函数 (核心修复)
 CREATE OR REPLACE FUNCTION get_restaurants_with_votes(user_uuid UUID DEFAULT NULL)
 RETURNS TABLE (
   id UUID,
