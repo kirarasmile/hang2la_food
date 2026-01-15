@@ -44,6 +44,20 @@ export interface Restaurant {
   created_at: string
   updated_at: string
   is_deleted: boolean
+  // 聚合字段
+  upvotes?: number
+  downvotes?: number
+  user_vote?: number // 当前用户的投票状态：1, -1 或 undefined
+}
+
+export interface RestaurantVote {
+  id: string
+  restaurant_id: string
+  user_id?: string
+  vote_type: 1 | -1
+  fingerprint?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface InviteCode {

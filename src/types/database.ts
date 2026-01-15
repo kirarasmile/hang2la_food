@@ -127,6 +127,35 @@ export interface Database {
           created_at?: string
         }
       }
+      restaurant_votes: {
+        Row: {
+          id: string
+          restaurant_id: string
+          user_id: string | null
+          vote_type: number
+          fingerprint: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          user_id?: string | null
+          vote_type: number
+          fingerprint?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          user_id?: string | null
+          vote_type?: number
+          fingerprint?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }

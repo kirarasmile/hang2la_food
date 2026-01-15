@@ -30,20 +30,29 @@ onMounted(async () => {
 async function fetchRestaurants() {
   loading.value = true
   try {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .eq('is_deleted', false)
-      .order('created_at', { ascending: false })
+    const { data, error } = await supabase.rpc('get_restaurants_with_votes', {
+      user_uuid: authStore.user?.id || null
+    })
     
-    if (error) throw error
-    
-    if (data && data.length > 0) {
+    if (error) {
+      // 如果 RPC 不存在，退回到普通查询
+      console.warn('RPC failed, falling back to simple query', error)
+      const { data: simpleData, error: simpleError } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false })
+      
+      if (simpleError) throw simpleError
+      restaurants.value = simpleData as Restaurant[]
+    } else {
       restaurants.value = data as Restaurant[]
-      console.log('[HomePage] Loaded', data.length, 'restaurants from database')
+    }
+    
+    if (restaurants.value.length > 0) {
+      console.log('[HomePage] Loaded', restaurants.value.length, 'restaurants')
     } else {
       console.log('[HomePage] No restaurants in database')
-      restaurants.value = []
     }
   } catch (error: any) {
     console.error('[HomePage] Failed to fetch restaurants:', error.message)
@@ -131,6 +140,9 @@ const { filteredRestaurants, filteredCount, totalCount } = useFilter(restaurants
           </NButton>
           <NButton @click="router.push('/map')">
             🗺️ 地图模式
+          </NButton>
+          <NButton @click="router.push('/random')">
+            🎲 随机选餐
           </NButton>
 
           <!-- 用户头像菜单 -->

@@ -3,10 +3,23 @@ import { computed } from 'vue'
 import { NCard, NTag, NSpace, NEllipsis } from 'naive-ui'
 import type { Restaurant } from '@/types'
 import { TIER_CONFIG, CATEGORY_CONFIG } from '@/types'
+import VoteButtons from './VoteButtons.vue'
+import NavigateButton from '@/components/common/NavigateButton.vue'
+import EditRestaurantModal from '@/components/admin/EditRestaurantModal.vue'
+import { useAuthStore } from '@/stores/auth'
+import { ref } from 'vue'
 
 const props = defineProps<{
   restaurant: Restaurant
 }>()
+
+const emit = defineEmits(['update'])
+
+const authStore = useAuthStore()
+const showEditModal = ref(false)
+const canEdit = computed(() => {
+  return authStore.user?.id === props.restaurant.created_by || authStore.isAdmin
+})
 
 const tierConfig = TIER_CONFIG[props.restaurant.tier]
 const categoryConfig = CATEGORY_CONFIG[props.restaurant.category]
@@ -32,15 +45,23 @@ const placeholderStyle = computed(() => ({
     <div class="card-content-wrapper">
       <div class="card-header">
         <h3 class="card-name">{{ restaurant.name }}</h3>
-        <NTag
-          :color="{ color: tierConfig.color + '1a', textColor: tierConfig.color, borderColor: tierConfig.color }"
-          :bordered="true"
-          round
-          size="small"
-          class="tier-tag"
-        >
-          {{ tierConfig.emoji }} {{ tierConfig.label }}
-        </NTag>
+        <NSpace :size="4" align="center">
+          <VoteButtons 
+            :restaurant-id="restaurant.id" 
+            :upvotes="restaurant.upvotes" 
+            :downvotes="restaurant.downvotes"
+            :user-vote="restaurant.user_vote"
+          />
+          <NTag
+            :color="{ color: tierConfig.color + '1a', textColor: tierConfig.color, borderColor: tierConfig.color }"
+            :bordered="true"
+            round
+            size="small"
+            class="tier-tag"
+          >
+            {{ tierConfig.emoji }} {{ tierConfig.label }}
+          </NTag>
+        </NSpace>
       </div>
       
       <NSpace vertical :size="6" class="card-details">
@@ -58,6 +79,23 @@ const placeholderStyle = computed(() => ({
         <div class="info-row location">
           <span class="info-icon">📍</span>
           <span class="address-text">{{ restaurant.address }}</span>
+          <NSpace :size="4">
+            <NavigateButton 
+              :address="restaurant.address" 
+              :latitude="restaurant.latitude" 
+              :longitude="restaurant.longitude"
+              quaternary
+              size="tiny"
+            />
+            <NButton 
+              v-if="canEdit" 
+              quaternary 
+              size="tiny" 
+              @click.stop="showEditModal = true"
+            >
+              编辑
+            </NButton>
+          </NSpace>
         </div>
         
         <div class="recommendation-box" v-if="restaurant.recommendation">
@@ -68,6 +106,12 @@ const placeholderStyle = computed(() => ({
         </div>
       </NSpace>
     </div>
+    
+    <EditRestaurantModal 
+      v-model:show="showEditModal" 
+      :restaurant="restaurant"
+      @success="$emit('update')"
+    />
   </NCard>
 </template>
 
@@ -182,10 +226,15 @@ const placeholderStyle = computed(() => ({
 }
 
 .address-text {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   opacity: 0.8;
+}
+
+.card-nav-btn {
+  margin-left: 4px;
 }
 
 .recommendation-box {

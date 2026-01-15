@@ -2,16 +2,30 @@
 import { ref, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { NButton, NIcon, NSpace, useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
-import { ArrowBackOutline, RefreshOutline } from '@vicons/ionicons5'
+import { ArrowBackOutline, RefreshOutline, DiceOutline } from '@vicons/ionicons5'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import FilterBar from '@/components/filter/FilterBar.vue'
 import { useFilter } from '@/composables/useFilter'
 import { TIER_CONFIG } from '@/types'
 import type { Restaurant } from '@/types'
 import { supabase } from '@/api/supabase'
+import { openAmap, isMobile, copyToClipboard } from '@/utils/navigation'
 
-const router = useRouter()
-const message = useMessage()
+
+const router = useRouter();
+const messageApi = useMessage();
+
+// 暴露给 window 用于 InfoWindow
+(window as any).handleMapNavigate = (address: string, lat?: number, lng?: number) => {
+  if (isMobile()) {
+    openAmap(address, lat, lng)
+  } else {
+    copyToClipboard(address).then(success => {
+      if (success) messageApi.success('地址已复制')
+    })
+  }
+}
+
 
 // 地图实例
 const map = shallowRef<any>(null)
@@ -105,9 +119,10 @@ async function initMap() {
     const securityJsCode = import.meta.env.VITE_AMAP_SECRET
     
     if (!key) {
-      message.error('未配置高德地图 Key')
+      messageApi.error('未配置高德地图 Key')
       return
     }
+
 
     // 设置安全密钥 (高德地图 2.0 必须)
     if (securityJsCode) {
@@ -202,8 +217,15 @@ function showInfoWindow(res: Restaurant) {
       <p>评级: ${TIER_CONFIG[res.tier].emoji} ${TIER_CONFIG[res.tier].label}</p>
       <p>价格: ¥${res.price_per_person}/人</p>
       <p>地址: ${res.address}</p>
+      <button 
+        onclick="window.handleMapNavigate('${res.address}', ${res.latitude}, ${res.longitude})"
+        style="margin-top: 8px; width: 100%; padding: 6px; background: #18a058; color: white; border: none; border-radius: 4px; cursor: pointer;"
+      >
+        ${isMobile() ? '开始导航' : '复制地址'}
+      </button>
     </div>
   `
+
   
   const infoWindow = new AMap.value.InfoWindow({
     content,
@@ -229,7 +251,12 @@ function handleBack() {
       </NSpace>
       
       <NSpace>
+        <NButton secondary @click="router.push('/random')">
+          <template #icon><NIcon><DiceOutline /></NIcon></template>
+          随机选餐
+        </NButton>
         <NButton secondary @click="fetchRestaurants">
+
           <template #icon><NIcon><RefreshOutline /></NIcon></template>
           刷新数据
         </NButton>

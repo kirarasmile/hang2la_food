@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { 
   NForm, NFormItem, NInput, NInputNumber, 
   NSelect, NButton, NSpace, NDivider, useMessage 
 } from 'naive-ui'
 import { TIER_CONFIG, CATEGORY_CONFIG } from '@/types'
-import type { TierRating, FoodCategory } from '@/types'
+import type { TierRating, FoodCategory, Restaurant } from '@/types'
 import ImageUploader from './ImageUploader.vue'
 import AddressPicker from './AddressPicker.vue'
+
+const props = defineProps<{
+  initialData?: Partial<Restaurant>
+}>()
 
 const emit = defineEmits(['submit', 'cancel'])
 const message = useMessage()
@@ -27,6 +31,13 @@ const formModel = reactive({
   recommendation: '',
   image_url: ''
 })
+
+onMounted(() => {
+  if (props.initialData) {
+    Object.assign(formModel, props.initialData)
+  }
+})
+
 
 const rules = {
   name: { required: true, message: '请输入餐厅名称', trigger: 'blur' },
@@ -118,8 +129,9 @@ async function handleSubmit() {
     <div class="form-section">
       <h3 class="section-title">🖼️ 展示与推荐</h3>
       <NFormItem label="餐厅图片" path="image_url">
-        <ImageUploader @success="handleImageUpload" />
+        <ImageUploader :initial-url="formModel.image_url" @success="handleImageUpload" />
       </NFormItem>
+
 
       <NFormItem label="一句话推荐 (避雷建议)" path="recommendation">
         <NInput

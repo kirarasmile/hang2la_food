@@ -10,14 +10,23 @@ import { ArrowBackOutline, AddOutline } from '@vicons/ionicons5'
 import { supabase } from '@/api/supabase'
 import { getInviteCodes, createInviteCode, revokeInviteCode } from '@/api/inviteCode'
 import { TIER_CONFIG } from '@/types'
+import type { Restaurant, InviteCode } from '@/types'
+import EditRestaurantModal from '@/components/admin/EditRestaurantModal.vue'
+import EditInviteCodeModal from '@/components/admin/EditInviteCodeModal.vue'
 
 const router = useRouter()
 const message = useMessage()
-const restaurants = ref<any[]>([])
-const inviteCodes = ref<any[]>([])
+const restaurants = ref<Restaurant[]>([])
+const inviteCodes = ref<InviteCode[]>([])
 const loading = ref(false)
 const showCreateModal = ref(false)
 const createLoading = ref(false)
+
+// 编辑相关的状态
+const showEditRestaurantModal = ref(false)
+const selectedRestaurant = ref<Restaurant | null>(null)
+const showEditInviteModal = ref(false)
+const selectedInviteCode = ref<InviteCode | null>(null)
 
 const createForm = ref({
   maxUses: 1,
@@ -103,46 +112,69 @@ async function handleCreateInvite() {
   }
 }
 
+function openEditRestaurant(row: Restaurant) {
+  selectedRestaurant.value = row
+  showEditRestaurantModal.value = true
+}
+
+function openEditInvite(row: InviteCode) {
+  selectedInviteCode.value = row
+  showEditInviteModal.value = true
+}
+
 // 餐厅列表列定义
 const restaurantColumns = [
   { title: '名称', key: 'name' },
   { 
     title: '评级', 
     key: 'tier',
-    render(row: any) {
-      const config = TIER_CONFIG[row.tier as keyof typeof TIER_CONFIG]
+    render(row: Restaurant) {
+      const config = TIER_CONFIG[row.tier]
       return h(NTag, { type: 'info', bordered: false, style: { backgroundColor: config?.color, color: '#fff' } }, { default: () => config?.label })
     }
   },
   { title: '城市', key: 'city' },
-  { title: '创建时间', key: 'created_at', render(row: any) { return new Date(row.created_at).toLocaleDateString() } },
+  { title: '创建时间', key: 'created_at', render(row: Restaurant) { return new Date(row.created_at).toLocaleDateString() } },
   {
     title: '操作',
     key: 'actions',
-    render(row: any) {
-      return h(
-        NPopconfirm,
-        {
-          onPositiveClick: () => handleDeleteRestaurant(row.id)
-        },
-        {
-          trigger: () => h(NButton, { size: 'small', type: 'error', quaternary: true }, { default: () => '删除' }),
-          default: () => '确定要删除这家餐厅吗？'
-        }
-      )
+    render(row: Restaurant) {
+      return h(NSpace, {}, {
+        default: () => [
+          h(
+            NPopconfirm,
+            {
+              onPositiveClick: () => handleDeleteRestaurant(row.id)
+            },
+            {
+              trigger: () => h(NButton, { size: 'small', type: 'error', quaternary: true }, { default: () => '删除' }),
+              default: () => '确定要删除这家餐厅吗？'
+            }
+          ),
+          h(
+            NButton,
+            {
+              size: 'small',
+              quaternary: true,
+              onClick: () => openEditRestaurant(row)
+            },
+            { default: () => '编辑' }
+          )
+        ]
+      })
     }
   }
 ]
 
 // 邀请码列表列定义
 const inviteColumns = [
-  { title: '邀请码', key: 'code', render(row: any) { return h('code', { style: { fontWeight: 'bold', fontSize: '1.1em' } }, row.code) } },
+  { title: '邀请码', key: 'code', render(row: InviteCode) { return h('code', { style: { fontWeight: 'bold', fontSize: '1.1em' } }, row.code) } },
   { title: '可用次数', key: 'max_uses' },
   { title: '已使用', key: 'current_uses' },
   { 
     title: '状态', 
     key: 'is_active',
-    render(row: any) {
+    render(row: InviteCode) {
       const active = row.is_active && (!row.expires_at || new Date(row.expires_at) > new Date())
       return h(NTag, { type: active ? 'success' : 'default', bordered: false }, { default: () => active ? '有效' : '失效' })
     }
@@ -150,16 +182,29 @@ const inviteColumns = [
   {
     title: '操作',
     key: 'actions',
-    render(row: any) {
-      return h(
-        NButton,
-        {
-          size: 'small',
-          disabled: !row.is_active,
-          onClick: () => handleRevokeInvite(row.id)
-        },
-        { default: () => '撤销' }
-      )
+    render(row: InviteCode) {
+      return h(NSpace, {}, {
+        default: () => [
+          h(
+            NButton,
+            {
+              size: 'small',
+              disabled: !row.is_active,
+              onClick: () => handleRevokeInvite(row.id)
+            },
+            { default: () => '撤销' }
+          ),
+          h(
+            NButton,
+            {
+              size: 'small',
+              quaternary: true,
+              onClick: () => openEditInvite(row)
+            },
+            { default: () => '编辑' }
+          )
+        ]
+      })
     }
   }
 ]
@@ -233,6 +278,19 @@ function handleBack() {
         </NSpace>
       </template>
     </NModal>
+
+    <!-- 编辑弹窗 -->
+    <EditRestaurantModal 
+      v-model:show="showEditRestaurantModal" 
+      :restaurant="selectedRestaurant"
+      @success="fetchRestaurants"
+    />
+    
+    <EditInviteCodeModal
+      v-model:show="showEditInviteModal"
+      :invite-code="selectedInviteCode"
+      @success="fetchInviteCodes"
+    />
   </div>
 </template>
 

@@ -14,6 +14,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('./views/MapPage.vue')
   },
   {
+    path: '/random',
+    name: 'random',
+    component: () => import('./views/RandomPickPage.vue')
+  },
+  {
     path: '/submit',
     name: 'submit',
     component: () => import('./views/SubmitPage.vue'),

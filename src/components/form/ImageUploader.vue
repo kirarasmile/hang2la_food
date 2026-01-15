@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { NUpload, NUploadDragger, NIcon, NText, NP, useMessage } from 'naive-ui'
 import { CloudUploadOutline } from '@vicons/ionicons5'
 import imageCompression from 'browser-image-compression'
 import { supabase } from '@/api/supabase'
 import { useAuthStore } from '@/stores/auth'
+
+const props = defineProps<{
+  initialUrl?: string
+}>()
 
 const emit = defineEmits(['success', 'error'])
 const message = useMessage()
@@ -12,6 +16,29 @@ const authStore = useAuthStore()
 
 const fileList = ref<any[]>([])
 const loading = ref(false)
+
+onMounted(() => {
+  if (props.initialUrl) {
+    fileList.value = [{
+      id: 'initial',
+      name: 'current-image',
+      status: 'finished',
+      url: props.initialUrl
+    }]
+  }
+})
+
+// 监听初始 URL 变化（防止延迟加载）
+watch(() => props.initialUrl, (newUrl) => {
+  if (newUrl && fileList.value.length === 0) {
+    fileList.value = [{
+      id: 'initial',
+      name: 'current-image',
+      status: 'finished',
+      url: newUrl
+    }]
+  }
+}, { immediate: true })
 
 async function customRequest({ file, onFinish, onError, onProgress }: any) {
   if (!authStore.user) {
