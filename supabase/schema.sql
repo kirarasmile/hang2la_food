@@ -138,16 +138,14 @@ CREATE POLICY "Authenticated insert restaurants" ON restaurants
 FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = created_by);
 
--- 餐厅：创建者可更新
-CREATE POLICY "Creator update restaurants" ON restaurants
-FOR UPDATE TO authenticated
-USING (auth.uid() = created_by)
-WITH CHECK (auth.uid() = created_by);
-
--- 餐厅：创建者或管理员可删除（软删除）
-CREATE POLICY "Creator or admin delete restaurants" ON restaurants
+-- 餐厅：创建者或管理员可更新（包括软删除）
+CREATE POLICY "Creator or admin update restaurants" ON restaurants
 FOR UPDATE TO authenticated
 USING (
+  auth.uid() = created_by OR 
+  EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND is_admin = TRUE)
+)
+WITH CHECK (
   auth.uid() = created_by OR 
   EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND is_admin = TRUE)
 );
