@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NCard, NTag, NSpace, NEllipsis } from 'naive-ui'
+import { NCard, NTag, NSpace, NEllipsis, NButton } from 'naive-ui'
 import type { Restaurant } from '@/types'
 import { TIER_CONFIG, CATEGORY_CONFIG } from '@/types'
 import VoteButtons from './VoteButtons.vue'
@@ -61,7 +61,9 @@ const placeholderStyle = computed(() => ({
     
     <div class="card-content-wrapper">
       <div class="card-header">
-        <h3 class="card-name">{{ restaurant.name }}</h3>
+        <NEllipsis :line-clamp="2" :tooltip="{ width: 280 }" class="card-name">
+          {{ restaurant.name }}
+        </NEllipsis>
         <NSpace :size="4" align="center">
           <VoteButtons 
             :restaurant-id="restaurant.id" 
@@ -142,7 +144,10 @@ const placeholderStyle = computed(() => ({
 <style scoped>
 .restaurant-card {
   width: 280px;
+  height: 340px; /* 固定高度确保卡片大小一致 */
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
   background-color: var(--bg-secondary);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
@@ -200,6 +205,9 @@ const placeholderStyle = computed(() => ({
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-header {
@@ -214,12 +222,9 @@ const placeholderStyle = computed(() => ({
   font-size: 16px;
   font-weight: 700;
   line-height: 1.4;
-  margin: 0;
   color: var(--text-primary);
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  flex: 1;
+  min-width: 0; /* 允许 NEllipsis 正常工作 */
 }
 
 .tier-tag {
@@ -229,6 +234,9 @@ const placeholderStyle = computed(() => ({
 
 .card-details {
   font-size: 13px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .info-row {
@@ -272,7 +280,7 @@ const placeholderStyle = computed(() => ({
 }
 
 .recommendation-box {
-  margin-top: 8px;
+  margin-top: auto; /* 推到底部 */
   padding: 8px 10px;
   background-color: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
@@ -281,7 +289,7 @@ const placeholderStyle = computed(() => ({
   line-height: 1.5;
   position: relative;
   font-style: italic;
-  min-height: 46px; /* 确保高度一致，约两行文字的高度 */
+  height: 46px; /* 固定高度，约两行文字 */
   display: flex;
   align-items: center;
   /* 防止文本溢出 */
@@ -320,8 +328,8 @@ const placeholderStyle = computed(() => ({
   .restaurant-card {
     width: 100%;
     max-width: 340px; /* 限制最大宽度，防止拉伸过长 */
+    height: 380px; /* 移动端稍微高一点 */
     margin: 0 auto; /* 居中显示 */
-    height: auto;
   }
   
   .card-image,
